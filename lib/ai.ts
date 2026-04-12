@@ -1,4 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateObject } from 'ai'
 import { z } from 'zod'
 
@@ -7,8 +8,7 @@ const groq = createOpenAI({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-const gemini = createOpenAI({
-  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
+const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
 })
 
@@ -19,8 +19,9 @@ export async function generateWithFallback<T>(
 ): Promise<T> {
   const providers = [
     { client: groq, model: 'llama-3.3-70b-versatile', name: 'Groq' },
-    { client: gemini, model: 'gemini-2.0-flash-lite', name: 'Gemini' },
+    { client: google, model: 'gemini-2.5-flash', name: 'Gemini' },
   ]
+
   for (const provider of providers) {
     try {
       const { object } = await generateObject({
@@ -35,5 +36,6 @@ export async function generateWithFallback<T>(
       console.error(`[AI] ${provider.name} failed:`, err)
     }
   }
+
   throw new Error('All AI providers exhausted')
 }

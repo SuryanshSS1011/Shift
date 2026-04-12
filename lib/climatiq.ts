@@ -7,7 +7,7 @@ interface ClimatiqEstimate {
 export async function estimateCommuteCO2(
   distanceMiles: number
 ): Promise<ClimatiqEstimate> {
-  const response = await fetch('https://beta4.api.climatiq.io/estimate', {
+  const response = await fetch('https://api.climatiq.io/estimate', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${process.env.CLIMATIQ_API_KEY}`,
@@ -16,6 +16,7 @@ export async function estimateCommuteCO2(
     body: JSON.stringify({
       emission_factor: {
         activity_id: 'passenger_vehicle-vehicle_type_car-fuel_source_na-engine_size_na-vehicle_age_na-vehicle_weight_na',
+        data_version: '^0',
       },
       parameters: {
         distance: distanceMiles,

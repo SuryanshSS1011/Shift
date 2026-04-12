@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -101,8 +101,15 @@ function DashboardContent() {
     goalStartDate: new Date().toISOString().split('T')[0],
   })
 
+  // Ref to prevent useEffect from running multiple times
+  const hasInitialized = useRef(false)
+
   // Get session ID (demo mode uses hardcoded)
   useEffect(() => {
+    // Only run initialization once to prevent race conditions
+    if (hasInitialized.current) return
+    hasInitialized.current = true
+
     if (demoMode.isDemoMode) {
       setSessionId(demoMode.sessionId)
       // Generate demo completed dates (last 12 days for demo streak)
@@ -177,21 +184,14 @@ function DashboardContent() {
       return
     }
 
-    // Use setTimeout to ensure localStorage is accessible after navigation
-    // This fixes the race condition where the component mounts before localStorage is synced
-    const checkSession = () => {
-      const storedSessionId = localStorage.getItem('shift_session_id')
-      if (!storedSessionId) {
-        router.replace('/onboarding')
-        return
-      }
-      setSessionId(storedSessionId)
+    // Check session - ref guard prevents re-runs
+    const storedSessionId = localStorage.getItem('shift_session_id')
+    if (!storedSessionId) {
+      router.replace('/onboarding')
+      return
     }
-
-    // Small timeout to ensure localStorage is available after page navigation
-    const timeoutId = setTimeout(checkSession, 0)
-    return () => clearTimeout(timeoutId)
-  }, [router, demoMode.isDemoMode, demoMode.sessionId, demoMode.action, demoMode.streak, demoMode.totals, demoMode.grid, demoMode.gridForecast])
+    setSessionId(storedSessionId)
+  }, [router, demoMode.isDemoMode])
 
   // Fetch today's action
   const fetchAction = useCallback(async () => {

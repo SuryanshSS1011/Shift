@@ -108,37 +108,80 @@ function generateHeuristicForecast(): ForecastDataPoint[] {
 }
 
 /**
- * Find the best N-hour window with lowest average carbon intensity
+ * Find the next green time window (carbon intensity < 200)
+ * Returns the next closest green hour(s) as a contiguous range
  */
+export function findNextGreenWindow(
+  forecast: ForecastDataPoint[]
+): { startHour: number; endHour: number; avgIntensity: number } {
+  if (forecast.length === 0) {
+    return { startHour: 10, endHour: 12, avgIntensity: 180 }
+  }
+
+  const GREEN_THRESHOLD = 200
+
+  // Find all green hours
+  const greenIndices: number[] = []
+  for (let i = 0; i < forecast.length; i++) {
+    if (forecast[i].carbonIntensity < GREEN_THRESHOLD) {
+      greenIndices.push(i)
+    }
+  }
+
+  // If no green hours, find the lowest intensity hour
+  if (greenIndices.length === 0) {
+    let minIndex = 0
+    let minIntensity = Infinity
+    for (let i = 0; i < forecast.length; i++) {
+      if (forecast[i].carbonIntensity < minIntensity) {
+        minIntensity = forecast[i].carbonIntensity
+        minIndex = i
+      }
+    }
+    const hour = new Date(forecast[minIndex].datetime).getHours()
+    return {
+      startHour: hour,
+      endHour: (hour + 1) % 24,
+      avgIntensity: Math.round(minIntensity),
+    }
+  }
+
+  // Find contiguous ranges of green hours starting from the first (next closest)
+  const firstGreenIndex = greenIndices[0]
+  let endIndex = firstGreenIndex
+
+  // Extend to include contiguous green hours
+  for (let i = 1; i < greenIndices.length; i++) {
+    if (greenIndices[i] === greenIndices[i - 1] + 1) {
+      endIndex = greenIndices[i]
+    } else {
+      break // Stop at first gap
+    }
+  }
+
+  // Calculate average intensity for the green window
+  let totalIntensity = 0
+  for (let i = firstGreenIndex; i <= endIndex; i++) {
+    totalIntensity += forecast[i].carbonIntensity
+  }
+  const avgIntensity = totalIntensity / (endIndex - firstGreenIndex + 1)
+
+  const startHour = new Date(forecast[firstGreenIndex].datetime).getHours()
+  const endHour = (new Date(forecast[endIndex].datetime).getHours() + 1) % 24
+
+  return {
+    startHour,
+    endHour,
+    avgIntensity: Math.round(avgIntensity),
+  }
+}
+
+// Keep the old function for backwards compatibility with batch-scheduler
 export function findOptimalWindow(
   forecast: ForecastDataPoint[],
   windowSizeHours: number = 2
 ): { startHour: number; endHour: number; avgIntensity: number } {
-  if (forecast.length < windowSizeHours) {
-    return { startHour: 0, endHour: windowSizeHours, avgIntensity: 280 }
-  }
-
-  let bestStart = 0
-  let bestAvg = Infinity
-
-  for (let i = 0; i <= forecast.length - windowSizeHours; i++) {
-    const windowSlice = forecast.slice(i, i + windowSizeHours)
-    const avg = windowSlice.reduce((sum, p) => sum + p.carbonIntensity, 0) / windowSizeHours
-
-    if (avg < bestAvg) {
-      bestAvg = avg
-      bestStart = i
-    }
-  }
-
-  const startDate = new Date(forecast[bestStart].datetime)
-  const endDate = new Date(forecast[Math.min(bestStart + windowSizeHours - 1, forecast.length - 1)].datetime)
-
-  return {
-    startHour: startDate.getHours(),
-    endHour: (endDate.getHours() + 1) % 24,
-    avgIntensity: Math.round(bestAvg),
-  }
+  return findNextGreenWindow(forecast)
 }
 
 /**
@@ -223,7 +266,7 @@ async function fetchGridForecast(lat: number, lng: number): Promise<GridForecast
       return buildForecastFromHeuristics(zone)
     }
 
-    const bestWindow = findOptimalWindow(forecast, 2)
+    const bestWindow = findNextGreenWindow(forecast)
     const worstWindow = findWorstWindow(forecast, 2)
 
     return {
@@ -241,7 +284,7 @@ async function fetchGridForecast(lat: number, lng: number): Promise<GridForecast
 
 function buildForecastFromHeuristics(zone: string): GridForecast {
   const forecast = generateHeuristicForecast()
-  const bestWindow = findOptimalWindow(forecast, 2)
+  const bestWindow = findNextGreenWindow(forecast)
   const worstWindow = findWorstWindow(forecast, 2)
 
   return {

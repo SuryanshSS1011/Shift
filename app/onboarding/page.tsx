@@ -88,6 +88,7 @@ function OnboardingContent() {
   const [flowState, setFlowState] = useState<FlowState>('checking')
   const [profile, setProfile] = useState<ProfileResponse | null>(null)
   const [sessionId, setSessionId] = useState<string>('')
+  const [existingSessionId, setExistingSessionId] = useState<string | null>(null)
 
   // Check if user already has a profile and handle accordingly
   useEffect(() => {
@@ -100,17 +101,13 @@ function OnboardingContent() {
     }
 
     if (isRetake && storedSessionId) {
-      // User is retaking - create new session ID (old profile will be replaced)
-      const newSessionId = crypto.randomUUID()
-      localStorage.setItem('shift_session_id', newSessionId)
-      setSessionId(newSessionId)
-    } else {
-      // New user - create session ID
-      const newSessionId = crypto.randomUUID()
-      localStorage.setItem('shift_session_id', newSessionId)
-      setSessionId(newSessionId)
+      // User is retaking - keep the existing session ID for now
+      // We'll decide whether to reuse or create new when submitting
+      setExistingSessionId(storedSessionId)
+      // Don't create new session yet - wait until profile submission
     }
 
+    // Start the quiz flow
     setFlowState('questions')
   }, [router, isRetake])
 
@@ -150,6 +147,13 @@ function OnboardingContent() {
   }) => {
     setFlowState('loading')
 
+    // Generate session ID now (at submission time, not at page load)
+    // For retake: create new session (old profile stays in DB but is orphaned)
+    // For new user: create new session
+    const newSessionId = crypto.randomUUID()
+    localStorage.setItem('shift_session_id', newSessionId)
+    setSessionId(newSessionId)
+
     const completeAnswers: OnboardingAnswers = {
       commuteType: answers.commuteType as OnboardingAnswers['commuteType'],
       dietPattern: answers.dietPattern as OnboardingAnswers['dietPattern'],
@@ -166,7 +170,7 @@ function OnboardingContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sessionId,
+          sessionId: newSessionId,
           answers: completeAnswers,
         }),
       })

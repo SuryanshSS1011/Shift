@@ -346,7 +346,7 @@ export default function ProfilePage() {
             onClick={handleResetProfile}
             className="block w-full py-3 border border-red-600/50 text-red-400 hover:bg-red-600/10 font-medium rounded-xl transition-colors text-center"
           >
-            Reset All Data
+            Delete All Data
           </button>
         </motion.div>
       </main>

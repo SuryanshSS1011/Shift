@@ -177,13 +177,21 @@ function DashboardContent() {
       return
     }
 
-    const storedSessionId = localStorage.getItem('shift_session_id')
-    if (!storedSessionId) {
-      router.push('/onboarding')
-      return
+    // Use setTimeout to ensure localStorage is accessible after navigation
+    // This fixes the race condition where the component mounts before localStorage is synced
+    const checkSession = () => {
+      const storedSessionId = localStorage.getItem('shift_session_id')
+      if (!storedSessionId) {
+        router.replace('/onboarding')
+        return
+      }
+      setSessionId(storedSessionId)
     }
-    setSessionId(storedSessionId)
-  }, [router, demoMode])
+
+    // Small timeout to ensure localStorage is available after page navigation
+    const timeoutId = setTimeout(checkSession, 0)
+    return () => clearTimeout(timeoutId)
+  }, [router, demoMode.isDemoMode, demoMode.sessionId, demoMode.action, demoMode.streak, demoMode.totals, demoMode.grid, demoMode.gridForecast])
 
   // Fetch today's action
   const fetchAction = useCallback(async () => {

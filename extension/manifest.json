@@ -10,7 +10,7 @@
     "https://gemini.google.com/*",
     "https://api.ecologits.ai/*",
     "https://*.upstash.io/*",
-    "https://shift-jade.vercel.app/*",
+    "https://useshift.vercel.app/*",
     "http://localhost:3000/*"
   ],
   "background": {

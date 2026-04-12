@@ -11,7 +11,7 @@ const ECOLOGITS_API_URL = "https://api.ecologits.ai/v1beta/estimations";
 let config = {
   UPSTASH_VECTOR_URL: "",
   UPSTASH_VECTOR_TOKEN: "",
-  SHIFT_API_URL: "https://shift-jade.vercel.app" // Default to production
+  SHIFT_API_URL: "https://useshift.vercel.app" // Default to production
 };
 
 // Average environmental impact per LLM query (from EcoLogits data)

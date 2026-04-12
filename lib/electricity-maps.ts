@@ -1,3 +1,5 @@
+import { getCached } from './redis'
+
 interface GridIntensity {
   zone: string
   carbonIntensity: number
@@ -22,7 +24,8 @@ export function getZoneFromCoordinates(lat: number, lng: number): string {
   return 'US-NY-NYIS' // Default fallback
 }
 
-export async function getGridIntensity(zone: string): Promise<GridIntensity> {
+async function fetchGridIntensity(lat: number, lng: number): Promise<GridIntensity> {
+  const zone = getZoneFromCoordinates(lat, lng)
   const response = await fetch(
     `https://api.electricitymap.org/v3/carbon-intensity/latest?zone=${zone}`,
     {
@@ -44,4 +47,10 @@ export async function getGridIntensity(zone: string): Promise<GridIntensity> {
     renewablePercent: data.renewablePercentage || 0,
     fossilFuelPercent: data.fossilFuelPercentage || 100,
   }
+}
+
+// 1-hour TTL cache
+export async function getGridIntensity(lat: number, lng: number): Promise<GridIntensity> {
+  const cacheKey = `grid:${lat.toFixed(2)}:${lng.toFixed(2)}`
+  return getCached(cacheKey, () => fetchGridIntensity(lat, lng), 3600)
 }

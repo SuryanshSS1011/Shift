@@ -1,3 +1,5 @@
+import { getCached } from './redis'
+
 interface WeatherData {
   temperature: number
   weatherCode: number
@@ -26,7 +28,7 @@ const WEATHER_CODES: Record<number, string> = {
   95: 'Thunderstorm',
 }
 
-export async function getWeather(lat: number, lng: number): Promise<WeatherData> {
+async function fetchWeather(lat: number, lng: number): Promise<WeatherData> {
   const response = await fetch(
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weathercode&temperature_unit=fahrenheit`
   )
@@ -42,4 +44,10 @@ export async function getWeather(lat: number, lng: number): Promise<WeatherData>
     weatherCode: data.current.weathercode,
     description: WEATHER_CODES[data.current.weathercode] || 'Unknown',
   }
+}
+
+// 30-minute TTL cache
+export async function getWeather(lat: number, lng: number): Promise<WeatherData> {
+  const cacheKey = `weather:${lat.toFixed(2)}:${lng.toFixed(2)}`
+  return getCached(cacheKey, () => fetchWeather(lat, lng), 1800)
 }

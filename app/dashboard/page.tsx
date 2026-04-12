@@ -8,10 +8,12 @@ import { MicroActionCard, MicroActionCardSkeleton } from '@/components/dashboard
 import { StreakDisplay } from '@/components/dashboard/StreakDisplay'
 import { ImpactDashboard } from '@/components/dashboard/ImpactDashboard'
 import { GridIntensityWidget } from '@/components/dashboard/GridIntensityWidget'
+import { GridForecastWidget } from '@/components/dashboard/GridForecastWidget'
 import { CelebrationOverlay } from '@/components/dashboard/CelebrationOverlay'
 import { ActivityHeatmap } from '@/components/dashboard/ActivityHeatmap'
 import { WeeklyReport } from '@/components/dashboard/WeeklyReport'
 import { useDemoMode } from '@/lib/hooks/useDemoMode'
+import type { GridForecastResponse } from '@/types/grid'
 
 interface Action {
   id: string
@@ -48,6 +50,7 @@ interface DashboardData {
     totalActionsCompleted: number
   }
   grid: GridData | null
+  gridForecast: GridForecastResponse | null
   completedDates: string[]
   weeklyReport: WeeklyReportData | null
 }
@@ -65,6 +68,7 @@ function DashboardContent() {
     streak: { current: 0, longest: 0 },
     totals: { totalCo2SavedKg: 0, totalDollarSaved: 0, totalActionsCompleted: 0 },
     grid: null,
+    gridForecast: null,
     completedDates: [],
     weeklyReport: null,
   })
@@ -93,6 +97,7 @@ function DashboardContent() {
         streak: demoMode.streak,
         totals: demoMode.totals,
         grid: demoMode.grid,
+        gridForecast: demoMode.gridForecast,
         completedDates: demoDates,
         weeklyReport: {
           whatWentWell: "You've been incredibly consistent with your food choices this week. Swapping beef for plant-based alternatives 4 times saved significant CO₂ and money.",
@@ -175,12 +180,37 @@ function DashboardContent() {
     }
   }, [sessionId, demoMode.isDemoMode])
 
+  // Fetch grid forecast
+  const fetchGridForecast = useCallback(async () => {
+    if (!sessionId || demoMode.isDemoMode) return
+
+    try {
+      const response = await fetch('/api/grid-forecast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setData((prev) => ({
+          ...prev,
+          gridForecast: result.data,
+        }))
+      }
+    } catch (err) {
+      console.error('Error fetching grid forecast:', err)
+    }
+  }, [sessionId, demoMode.isDemoMode])
+
   useEffect(() => {
     if (sessionId) {
       fetchAction()
       fetchGrid()
+      fetchGridForecast()
     }
-  }, [sessionId, fetchAction, fetchGrid])
+  }, [sessionId, fetchAction, fetchGrid, fetchGridForecast])
 
   // Complete action
   const handleComplete = async () => {
@@ -294,11 +324,15 @@ function DashboardContent() {
 
         {/* Grid Intensity */}
         {data.grid && (
-          <section>
+          <section className="space-y-3">
             <GridIntensityWidget
               zone={data.grid.zone}
               carbonIntensity={data.grid.carbonIntensity}
               renewablePercent={data.grid.renewablePercent}
+            />
+            <GridForecastWidget
+              forecast={data.gridForecast}
+              isLoading={!data.gridForecast && !demoMode.isDemoMode}
             />
           </section>
         )}

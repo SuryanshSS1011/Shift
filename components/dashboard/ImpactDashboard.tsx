@@ -60,7 +60,11 @@ export function ImpactDashboard({
           <Text className="!text-green-400">Monthly Goal Progress</Text>
           <Text className="!text-green-50">{totalCo2SavedKg.toFixed(1)} / {monthlyGoal} kg</Text>
         </div>
-        <ProgressBar value={progressPercent} color="green" className="!bg-[#0f1a0f]" />
+        <ProgressBar
+          value={progressPercent}
+          color="emerald"
+          className="[&>div]:bg-[#0f1a0f]"
+        />
         <Text className="!text-green-400/70 mt-2 text-center">
           {progressPercent >= 100 ? 'Goal achieved!' : `${(monthlyGoal - totalCo2SavedKg).toFixed(1)} kg to go`}
         </Text>

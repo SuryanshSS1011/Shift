@@ -138,6 +138,17 @@ export function Header({ showBackButton, onBack, showMenu = false, isDemoMode = 
                         {!isDemoMode && (
                           <>
                             <Link
+                              href="/profile"
+                              className="flex items-center gap-3 px-4 py-3 text-green-50 hover:bg-green-800/30 transition-colors"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              My Profile
+                            </Link>
+
+                            <Link
                               href="/onboarding"
                               className="flex items-center gap-3 px-4 py-3 text-green-50 hover:bg-green-800/30 transition-colors"
                               onClick={() => setMenuOpen(false)}

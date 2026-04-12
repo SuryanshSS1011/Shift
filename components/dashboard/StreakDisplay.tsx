@@ -16,6 +16,15 @@ export function StreakDisplay({ currentStreak, longestStreak }: StreakDisplayPro
   const goalDays = 30
   const progressPercent = Math.min((currentStreak / goalDays) * 100, 100)
 
+  // Dynamic color based on progress
+  const getPathColor = () => {
+    if (currentStreak >= goalDays) return '#fbbf24' // Gold for goal achieved
+    if (currentStreak >= 21) return '#4ade80' // Bright green for 70%+
+    if (currentStreak >= 14) return '#22c55e' // Green for 47%+
+    if (currentStreak >= 7) return '#10b981' // Emerald for 23%+
+    return '#34d399' // Light emerald for starting out
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -25,16 +34,17 @@ export function StreakDisplay({ currentStreak, longestStreak }: StreakDisplayPro
       <div className="flex items-center justify-between">
         {/* Current Streak with Circular Progress */}
         <div className="text-center flex-1">
-          <div className="w-28 h-28 mx-auto mb-2">
+          <div className="w-28 h-28 mx-auto mb-2 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)]">
             <CircularProgressbar
               value={progressPercent}
               text={`${currentStreak}`}
               styles={buildStyles({
                 textSize: '28px',
-                pathColor: currentStreak >= goalDays ? '#fbbf24' : '#22c55e',
+                pathColor: getPathColor(),
                 textColor: '#f0fdf4',
-                trailColor: '#0f1a0f',
+                trailColor: 'rgba(34, 197, 94, 0.15)',
                 pathTransitionDuration: 0.5,
+                strokeLinecap: 'round',
               })}
             />
           </div>

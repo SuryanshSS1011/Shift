@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts'
+import { AreaChart } from '@tremor/react'
 import { motion } from 'framer-motion'
 import type { ForecastDataPoint } from '@/types/grid'
 
@@ -20,11 +20,11 @@ function formatHour(hour: number): string {
   return `${hour - 12}p`
 }
 
-// Get color based on intensity
-function getIntensityColor(intensity: number): string {
-  if (intensity < 200) return '#22c55e' // green-500
-  if (intensity < 400) return '#eab308' // yellow-500
-  return '#ef4444' // red-500
+// Get color class based on intensity
+function getIntensityColorClass(intensity: number): string {
+  if (intensity < 200) return 'green'
+  if (intensity < 400) return 'yellow'
+  return 'red'
 }
 
 export function ForecastChart({
@@ -34,30 +34,32 @@ export function ForecastChart({
   isLoading = false,
 }: ForecastChartProps) {
   const chartData = useMemo(() => {
-    return forecast.map((point, index) => {
+    return forecast.map((point) => {
       const date = new Date(point.datetime)
       const hour = date.getHours()
+      const isBestWindow = bestWindow && hour >= bestWindow.startHour && hour < bestWindow.endHour
+      const isCurrent = hour === currentHour
+
       return {
-        hour,
-        hourLabel: formatHour(hour),
-        intensity: point.carbonIntensity,
-        fill: getIntensityColor(point.carbonIntensity),
-        index,
+        hour: formatHour(hour),
+        'Carbon Intensity': point.carbonIntensity,
+        isBestWindow,
+        isCurrent,
       }
     })
+  }, [forecast, bestWindow, currentHour])
+
+  // Determine dominant color based on average intensity
+  const avgIntensity = useMemo(() => {
+    if (forecast.length === 0) return 280
+    return forecast.reduce((sum, p) => sum + p.carbonIntensity, 0) / forecast.length
   }, [forecast])
 
-  // Calculate Y-axis domain with some padding
-  const yDomain = useMemo(() => {
-    if (chartData.length === 0) return [0, 500]
-    const min = Math.min(...chartData.map(d => d.intensity))
-    const max = Math.max(...chartData.map(d => d.intensity))
-    return [Math.floor(min / 50) * 50, Math.ceil(max / 50) * 50 + 50]
-  }, [chartData])
+  const chartColor = getIntensityColorClass(avgIntensity)
 
   if (isLoading) {
     return (
-      <div className="h-[140px] bg-[#1a2e1a]/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="h-[160px] bg-[#1a2e1a]/50 rounded-lg animate-pulse flex items-center justify-center">
         <span className="text-green-600 text-sm">Loading forecast...</span>
       </div>
     )
@@ -65,81 +67,61 @@ export function ForecastChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="h-[140px] bg-[#1a2e1a]/50 rounded-lg flex items-center justify-center">
+      <div className="h-[160px] bg-[#1a2e1a]/50 rounded-lg flex items-center justify-center">
         <span className="text-green-600 text-sm">No forecast data available</span>
       </div>
     )
   }
-
-  const nowIndex = currentHour !== undefined
-    ? chartData.findIndex(d => d.hour === currentHour)
-    : 0
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="h-[140px] w-full"
+      className="h-[160px] w-full"
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={chartData}
-          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-        >
-          <defs>
-            <linearGradient id="intensityGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#22c55e" stopOpacity={0.05} />
-            </linearGradient>
-          </defs>
-
-          <XAxis
-            dataKey="hourLabel"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 10, fill: '#86efac' }}
-            interval={5}
-          />
-          <YAxis
-            domain={yDomain}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 10, fill: '#86efac' }}
-            tickFormatter={(value) => `${value}`}
-          />
-
-          {/* Best window highlight */}
-          {bestWindow && (
-            <ReferenceArea
-              x1={chartData.findIndex(d => d.hour === bestWindow.startHour)}
-              x2={chartData.findIndex(d => d.hour === bestWindow.endHour) || chartData.findIndex(d => d.hour === bestWindow.startHour) + 2}
-              fill="#22c55e"
-              fillOpacity={0.15}
-              stroke="#22c55e"
-              strokeOpacity={0.3}
-            />
-          )}
-
-          {/* Current time indicator */}
-          {nowIndex >= 0 && (
-            <ReferenceLine
-              x={nowIndex}
-              stroke="#f0fdf4"
-              strokeWidth={2}
-              strokeDasharray="4 4"
-            />
-          )}
-
-          <Area
-            type="monotone"
-            dataKey="intensity"
-            stroke="#22c55e"
-            strokeWidth={2}
-            fill="url(#intensityGradient)"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <AreaChart
+        data={chartData}
+        index="hour"
+        categories={['Carbon Intensity']}
+        colors={[chartColor]}
+        showLegend={false}
+        showGridLines={false}
+        showYAxis={true}
+        showXAxis={true}
+        yAxisWidth={40}
+        className="h-full"
+        curveType="monotone"
+        valueFormatter={(value) => `${Math.round(value)} gCO₂`}
+        customTooltip={({ payload, active }) => {
+          if (!active || !payload || payload.length === 0) return null
+          const data = payload[0].payload
+          const intensity = data['Carbon Intensity']
+          const colorClass = getIntensityColorClass(intensity)
+          const colorMap: Record<string, string> = {
+            green: 'bg-green-500',
+            yellow: 'bg-yellow-500',
+            red: 'bg-red-500',
+          }
+          return (
+            <div className="bg-[#1a2e1a] border border-green-800/50 rounded-lg p-2 shadow-lg">
+              <p className="text-green-300 text-xs font-medium">{data.hour}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className={`w-2 h-2 rounded-full ${colorMap[colorClass]}`} />
+                <span className="text-green-50 text-sm font-semibold">
+                  {Math.round(intensity)} gCO₂/kWh
+                </span>
+              </div>
+              {data.isBestWindow && (
+                <p className="text-green-400 text-xs mt-1">Best time window</p>
+              )}
+              {data.isCurrent && (
+                <p className="text-green-300 text-xs mt-1">Current hour</p>
+              )}
+            </div>
+          )
+        }}
+      />
     </motion.div>
   )
 }

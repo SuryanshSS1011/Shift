@@ -1,13 +1,10 @@
-import { getGridForecast, findOptimalWindow, isCurrentlyGreenGrid, getZoneFromCoordinates } from './electricity-maps'
+import { getGridForecast, findOptimalWindow, isCurrentlyGreenGrid } from './electricity-maps'
 import { getCached } from './redis'
-import type { BatchScheduleResult, GridForecast } from '@/types/grid'
-
-// Default coordinates for batch scheduling (NYC)
-const DEFAULT_LAT = 40.7128
-const DEFAULT_LNG = -74.006
+import { supabase } from './supabase'
+import type { BatchScheduleResult } from '@/types/grid'
 
 /**
- * Get batch schedule recommendation for a zone
+ * Get batch schedule recommendation for coordinates
  * Determines if now is a good time to run batch jobs
  */
 async function fetchBatchSchedule(lat: number, lng: number): Promise<BatchScheduleResult> {
@@ -47,13 +44,43 @@ async function fetchBatchSchedule(lat: number, lng: number): Promise<BatchSchedu
 }
 
 /**
+ * Look up user coordinates from database by session ID
+ */
+async function getUserCoordinates(sessionId: string): Promise<{ lat: number; lng: number } | null> {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('lat, lng')
+    .eq('session_id', sessionId)
+    .single()
+
+  if (error || !user || !user.lat || !user.lng) {
+    return null
+  }
+
+  return { lat: user.lat, lng: user.lng }
+}
+
+/**
  * Check if batch jobs should run now based on grid intensity
  * Returns true if current intensity is in the bottom 25% of today's forecast
  */
-export async function shouldRunBatchNow(lat: number = DEFAULT_LAT, lng: number = DEFAULT_LNG): Promise<boolean> {
+export async function shouldRunBatchNow(lat: number, lng: number): Promise<boolean> {
   const cacheKey = `batch-schedule:${lat.toFixed(2)}:${lng.toFixed(2)}`
   const schedule = await getCached(cacheKey, () => fetchBatchSchedule(lat, lng), 1800)
   return schedule.shouldRunNow
+}
+
+/**
+ * Check if batch jobs should run now for a specific user (by session ID)
+ * Looks up user coordinates from database
+ */
+export async function shouldRunBatchNowForUser(sessionId: string): Promise<boolean> {
+  const coords = await getUserCoordinates(sessionId)
+  if (!coords) {
+    console.log('[batch-scheduler] No coordinates found for user, defaulting to run now')
+    return true // If we can't determine location, don't block execution
+  }
+  return shouldRunBatchNow(coords.lat, coords.lng)
 }
 
 /**
@@ -61,8 +88,8 @@ export async function shouldRunBatchNow(lat: number = DEFAULT_LAT, lng: number =
  * Returns a Date when the grid is expected to be clean
  */
 export async function getNextGreenWindow(
-  lat: number = DEFAULT_LAT,
-  lng: number = DEFAULT_LNG,
+  lat: number,
+  lng: number,
   minHoursFromNow: number = 0
 ): Promise<Date | null> {
   const cacheKey = `batch-schedule:${lat.toFixed(2)}:${lng.toFixed(2)}`
@@ -88,14 +115,36 @@ export async function getNextGreenWindow(
 }
 
 /**
+ * Get the next green window for a specific user (by session ID)
+ */
+export async function getNextGreenWindowForUser(
+  sessionId: string,
+  minHoursFromNow: number = 0
+): Promise<Date | null> {
+  const coords = await getUserCoordinates(sessionId)
+  if (!coords) {
+    return new Date() // If we can't determine location, allow immediate execution
+  }
+  return getNextGreenWindow(coords.lat, coords.lng, minHoursFromNow)
+}
+
+/**
  * Get full batch schedule information
  */
-export async function getBatchSchedule(
-  lat: number = DEFAULT_LAT,
-  lng: number = DEFAULT_LNG
-): Promise<BatchScheduleResult> {
+export async function getBatchSchedule(lat: number, lng: number): Promise<BatchScheduleResult> {
   const cacheKey = `batch-schedule:${lat.toFixed(2)}:${lng.toFixed(2)}`
   return getCached(cacheKey, () => fetchBatchSchedule(lat, lng), 1800)
+}
+
+/**
+ * Get full batch schedule for a specific user (by session ID)
+ */
+export async function getBatchScheduleForUser(sessionId: string): Promise<BatchScheduleResult | null> {
+  const coords = await getUserCoordinates(sessionId)
+  if (!coords) {
+    return null
+  }
+  return getBatchSchedule(coords.lat, coords.lng)
 }
 
 /**
@@ -103,15 +152,15 @@ export async function getBatchSchedule(
  * Falls back to immediate execution if maxWaitHours is exceeded
  *
  * @param task - The async task to execute
- * @param maxWaitHours - Maximum hours to wait for green grid (default: 4)
  * @param lat - Latitude for grid lookup
  * @param lng - Longitude for grid lookup
+ * @param maxWaitHours - Maximum hours to wait for green grid (default: 4)
  */
 export async function deferToGreenGrid<T>(
   task: () => Promise<T>,
-  maxWaitHours: number = 4,
-  lat: number = DEFAULT_LAT,
-  lng: number = DEFAULT_LNG
+  lat: number,
+  lng: number,
+  maxWaitHours: number = 4
 ): Promise<T> {
   const schedule = await getBatchSchedule(lat, lng)
 
@@ -152,7 +201,24 @@ export async function deferToGreenGrid<T>(
 }
 
 /**
- * Get batch schedule for a specific zone (by zone ID instead of coordinates)
+ * Execute a task for a specific user, deferring to green grid if possible
+ */
+export async function deferToGreenGridForUser<T>(
+  task: () => Promise<T>,
+  sessionId: string,
+  maxWaitHours: number = 4
+): Promise<T> {
+  const coords = await getUserCoordinates(sessionId)
+  if (!coords) {
+    console.log('[batch-scheduler] No coordinates found for user, executing immediately')
+    return task()
+  }
+  return deferToGreenGrid(task, coords.lat, coords.lng, maxWaitHours)
+}
+
+/**
+ * Get batch schedule for a specific zone (by zone ID)
+ * Uses approximate center coordinates for the zone
  */
 export async function shouldRunBatchNowForZone(zone: string): Promise<boolean> {
   // Map zone to approximate center coordinates
@@ -163,6 +229,10 @@ export async function shouldRunBatchNowForZone(zone: string): Promise<boolean> {
     'US-MIDA-PJM': { lat: 39.2904, lng: -76.6122 },
   }
 
-  const coords = zoneCoordinates[zone] || zoneCoordinates['US-NY-NYIS']
+  const coords = zoneCoordinates[zone]
+  if (!coords) {
+    console.log(`[batch-scheduler] Unknown zone ${zone}, defaulting to run now`)
+    return true
+  }
   return shouldRunBatchNow(coords.lat, coords.lng)
 }

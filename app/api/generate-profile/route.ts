@@ -16,11 +16,19 @@ import type { OnboardingAnswers } from '@/types/user'
 const InputSchema = z.object({
   sessionId: z.string().min(1, 'sessionId is required'),
   answers: z.object({
+    // Lifestyle questions
     commuteType: z.enum(['drive', 'transit', 'bike_walk', 'wfh', 'mixed']),
     dietPattern: z.enum(['meat_most_days', 'chicken_fish', 'mostly_plant', 'vegan_vegetarian']),
     livingSituation: z.enum(['city_apartment', 'urban_house', 'suburbs', 'rural']),
     primaryBarrier: z.enum(['time', 'cost', 'knowledge', 'overwhelmed']),
     primaryMotivation: z.enum(['planet', 'money', 'health', 'community']),
+    // Goal-setting questions
+    goalDuration: z.union([z.literal(7), z.literal(14), z.literal(21), z.literal(30)]),
+    actionFrequency: z.enum(['daily', 'every_other_day', 'twice_weekly']),
+    preferredTime: z.enum(['morning', 'afternoon', 'evening']),
+    difficultyPreference: z.enum(['start_easy', 'moderate', 'challenge_me']),
+    focusAreas: z.array(z.enum(['food', 'transport', 'energy', 'shopping', 'water', 'waste'])).min(2).max(3),
+    // Location
     city: z.string().min(1),
     homeAddress: z.string().optional(),
     workAddress: z.string().optional(),
@@ -144,6 +152,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Calculate goal start and end dates
+    const goalStartDate = new Date().toISOString().split('T')[0]
+    const goalEndDate = new Date(
+      Date.now() + answers.goalDuration * 24 * 60 * 60 * 1000
+    ).toISOString().split('T')[0]
+
     // Save user to database with all computed fields
     const { data: user, error: insertError } = await supabase
       .from('users')
@@ -156,9 +170,19 @@ export async function POST(request: NextRequest) {
         living_situation: answers.livingSituation,
         primary_barrier: answers.primaryBarrier,
         primary_motivation: answers.primaryMotivation,
+        // New goal-setting fields
+        goal_duration: answers.goalDuration,
+        goal_start_date: goalStartDate,
+        goal_end_date: goalEndDate,
+        action_frequency: answers.actionFrequency,
+        preferred_time: answers.preferredTime,
+        difficulty_preference: answers.difficultyPreference,
+        focus_areas: answers.focusAreas,
+        // AI-generated fields
         ai_profile_summary: aiResult.aiProfileSummary,
         top_impact_areas: aiResult.topImpactAreas,
         estimated_annual_footprint_kg: aiResult.estimatedAnnualFootprintKg,
+        // Location and commute data
         lat,
         lng,
         electricity_zone: electricityZone,
@@ -202,6 +226,13 @@ export async function POST(request: NextRequest) {
         commuteDistanceMiles,
         carCo2KgPerTrip,
         transitCo2KgPerTrip,
+        // Goal data
+        goalDuration: answers.goalDuration,
+        goalStartDate,
+        goalEndDate,
+        actionFrequency: answers.actionFrequency,
+        preferredTime: answers.preferredTime,
+        focusAreas: answers.focusAreas,
       },
     })
   } catch (error) {

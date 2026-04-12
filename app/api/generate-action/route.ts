@@ -125,6 +125,15 @@ export async function POST(request: NextRequest) {
       livingSituation: user.living_situation,
       primaryBarrier: user.primary_barrier,
       primaryMotivation: user.primary_motivation,
+      // Goal-setting fields
+      goalDuration: user.goal_duration || 14,
+      goalStartDate: user.goal_start_date || new Date().toISOString().split('T')[0],
+      goalEndDate: user.goal_end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      actionFrequency: user.action_frequency || 'daily',
+      preferredTime: user.preferred_time || 'morning',
+      difficultyPreference: user.difficulty_preference || 'start_easy',
+      focusAreas: (user.focus_areas || ['food', 'energy', 'transport']) as ActionCategory[],
+      // AI-generated fields
       aiProfileSummary: user.ai_profile_summary || '',
       topImpactAreas: (user.top_impact_areas || ['food', 'energy', 'transport']) as ActionCategory[],
       estimatedAnnualFootprintKg: user.estimated_annual_footprint_kg || 16000,

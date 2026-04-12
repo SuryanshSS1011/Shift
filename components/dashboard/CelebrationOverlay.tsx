@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ShareButton } from '@/components/shared/ShareButton'
 
 interface CelebrationOverlayProps {
   isVisible: boolean
   onClose: () => void
   co2Saved: number
   streak: number
+  totalCo2Saved?: number
+  totalActionsCompleted?: number
 }
 
 export function CelebrationOverlay({
@@ -15,14 +18,18 @@ export function CelebrationOverlay({
   onClose,
   co2Saved,
   streak,
+  totalCo2Saved = 0,
+  totalActionsCompleted = 0,
 }: CelebrationOverlayProps) {
-  // Auto-close after 3 seconds
+  const [showShareOptions, setShowShareOptions] = useState(false)
+
+  // Auto-close after 5 seconds (longer to allow for sharing)
   useEffect(() => {
-    if (isVisible) {
-      const timer = setTimeout(onClose, 3000)
+    if (isVisible && !showShareOptions) {
+      const timer = setTimeout(onClose, 5000)
       return () => clearTimeout(timer)
     }
-  }, [isVisible, onClose])
+  }, [isVisible, onClose, showShareOptions])
 
   return (
     <AnimatePresence>
@@ -101,16 +108,47 @@ export function CelebrationOverlay({
               <p className="text-green-400 text-sm">streak</p>
             </motion.div>
 
-            {/* Close button */}
-            <motion.button
+            {/* Share and Close buttons */}
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              onClick={onClose}
-              className="text-green-400 hover:text-green-300 text-sm"
+              className="space-y-3"
             >
-              Tap anywhere to continue
-            </motion.button>
+              <button
+                onClick={() => setShowShareOptions(!showShareOptions)}
+                className="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share Your Impact
+              </button>
+
+              {showShareOptions && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="overflow-hidden"
+                >
+                  <ShareButton
+                    variant="card"
+                    stats={{
+                      co2Saved: totalCo2Saved || co2Saved,
+                      streak,
+                      actionsCompleted: totalActionsCompleted,
+                    }}
+                  />
+                </motion.div>
+              )}
+
+              <button
+                onClick={onClose}
+                className="text-green-400 hover:text-green-300 text-sm"
+              >
+                {showShareOptions ? 'Close' : 'Tap anywhere to continue'}
+              </button>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}

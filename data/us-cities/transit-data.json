@@ -1,62 +1,242 @@
 {
   "new_york": {
+    "displayName": "New York, NY",
+    "lat": 40.7128,
+    "lng": -74.006,
     "hasSubway": true,
     "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 89
-  },
-  "san_francisco": {
-    "hasSubway": true,
-    "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 80
-  },
-  "chicago": {
-    "hasSubway": true,
-    "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 65
-  },
-  "boston": {
-    "hasSubway": true,
-    "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 72
-  },
-  "philadelphia": {
-    "hasSubway": true,
-    "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 67
-  },
-  "seattle": {
-    "hasSubway": true,
-    "hasBus": true,
-    "hasCommuter Rail": false,
-    "transitScore": 57
-  },
-  "washington_dc": {
-    "hasSubway": true,
-    "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 69
+    "hasCommuterRail": true,
+    "transitScore": 89,
+    "bikeScore": 70,
+    "walkScore": 88,
+    "avgCommuteMinutes": 41
   },
   "los_angeles": {
+    "displayName": "Los Angeles, CA",
+    "lat": 34.0522,
+    "lng": -118.2437,
     "hasSubway": true,
     "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 53
+    "hasCommuterRail": true,
+    "transitScore": 53,
+    "bikeScore": 56,
+    "walkScore": 68,
+    "avgCommuteMinutes": 31
+  },
+  "chicago": {
+    "displayName": "Chicago, IL",
+    "lat": 41.8781,
+    "lng": -87.6298,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 65,
+    "bikeScore": 72,
+    "walkScore": 78,
+    "avgCommuteMinutes": 35
+  },
+  "houston": {
+    "displayName": "Houston, TX",
+    "lat": 29.7604,
+    "lng": -95.3698,
+    "hasSubway": false,
+    "hasBus": true,
+    "hasCommuterRail": false,
+    "transitScore": 36,
+    "bikeScore": 49,
+    "walkScore": 47,
+    "avgCommuteMinutes": 28
+  },
+  "phoenix": {
+    "displayName": "Phoenix, AZ",
+    "lat": 33.4484,
+    "lng": -112.074,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": false,
+    "transitScore": 28,
+    "bikeScore": 55,
+    "walkScore": 41,
+    "avgCommuteMinutes": 26
+  },
+  "philadelphia": {
+    "displayName": "Philadelphia, PA",
+    "lat": 39.9526,
+    "lng": -75.1652,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 67,
+    "bikeScore": 67,
+    "walkScore": 79,
+    "avgCommuteMinutes": 32
+  },
+  "san_antonio": {
+    "displayName": "San Antonio, TX",
+    "lat": 29.4241,
+    "lng": -98.4936,
+    "hasSubway": false,
+    "hasBus": true,
+    "hasCommuterRail": false,
+    "transitScore": 27,
+    "bikeScore": 40,
+    "walkScore": 36,
+    "avgCommuteMinutes": 25
+  },
+  "san_diego": {
+    "displayName": "San Diego, CA",
+    "lat": 32.7157,
+    "lng": -117.1611,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 39,
+    "bikeScore": 53,
+    "walkScore": 52,
+    "avgCommuteMinutes": 24
+  },
+  "dallas": {
+    "displayName": "Dallas, TX",
+    "lat": 32.7767,
+    "lng": -96.797,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 39,
+    "bikeScore": 46,
+    "walkScore": 46,
+    "avgCommuteMinutes": 27
+  },
+  "san_jose": {
+    "displayName": "San Jose, CA",
+    "lat": 37.3382,
+    "lng": -121.8863,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 38,
+    "bikeScore": 57,
+    "walkScore": 50,
+    "avgCommuteMinutes": 28
+  },
+  "austin": {
+    "displayName": "Austin, TX",
+    "lat": 30.2672,
+    "lng": -97.7431,
+    "hasSubway": false,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 32,
+    "bikeScore": 55,
+    "walkScore": 41,
+    "avgCommuteMinutes": 25
+  },
+  "san_francisco": {
+    "displayName": "San Francisco, CA",
+    "lat": 37.7749,
+    "lng": -122.4194,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 80,
+    "bikeScore": 71,
+    "walkScore": 87,
+    "avgCommuteMinutes": 33
+  },
+  "seattle": {
+    "displayName": "Seattle, WA",
+    "lat": 47.6062,
+    "lng": -122.3321,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 57,
+    "bikeScore": 71,
+    "walkScore": 73,
+    "avgCommuteMinutes": 28
+  },
+  "denver": {
+    "displayName": "Denver, CO",
+    "lat": 39.7392,
+    "lng": -104.9903,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 45,
+    "bikeScore": 74,
+    "walkScore": 61,
+    "avgCommuteMinutes": 26
+  },
+  "washington_dc": {
+    "displayName": "Washington, DC",
+    "lat": 38.9072,
+    "lng": -77.0369,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 69,
+    "bikeScore": 69,
+    "walkScore": 77,
+    "avgCommuteMinutes": 34
+  },
+  "boston": {
+    "displayName": "Boston, MA",
+    "lat": 42.3601,
+    "lng": -71.0589,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 72,
+    "bikeScore": 70,
+    "walkScore": 83,
+    "avgCommuteMinutes": 31
   },
   "miami": {
+    "displayName": "Miami, FL",
+    "lat": 25.7617,
+    "lng": -80.1918,
     "hasSubway": true,
     "hasBus": true,
-    "hasCommuter Rail": true,
-    "transitScore": 57
+    "hasCommuterRail": true,
+    "transitScore": 57,
+    "bikeScore": 64,
+    "walkScore": 78,
+    "avgCommuteMinutes": 29
   },
   "atlanta": {
+    "displayName": "Atlanta, GA",
+    "lat": 33.749,
+    "lng": -84.388,
     "hasSubway": true,
     "hasBus": true,
-    "hasCommuter Rail": false,
-    "transitScore": 48
+    "hasCommuterRail": false,
+    "transitScore": 48,
+    "bikeScore": 45,
+    "walkScore": 48,
+    "avgCommuteMinutes": 27
+  },
+  "portland": {
+    "displayName": "Portland, OR",
+    "lat": 45.5152,
+    "lng": -122.6784,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 51,
+    "bikeScore": 83,
+    "walkScore": 65,
+    "avgCommuteMinutes": 26
+  },
+  "minneapolis": {
+    "displayName": "Minneapolis, MN",
+    "lat": 44.9778,
+    "lng": -93.265,
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuterRail": true,
+    "transitScore": 55,
+    "bikeScore": 81,
+    "walkScore": 69,
+    "avgCommuteMinutes": 24
   }
 }

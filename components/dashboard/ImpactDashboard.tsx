@@ -63,7 +63,7 @@ export function ImpactDashboard({
         <ProgressBar
           value={progressPercent}
           color="emerald"
-          className="[&>div]:bg-[#0f1a0f]"
+          className="!bg-[#0f1a0f] [&>div]:!bg-emerald-500"
         />
         <Text className="!text-green-400/70 mt-2 text-center">
           {progressPercent >= 100 ? 'Goal achieved!' : `${(monthlyGoal - totalCo2SavedKg).toFixed(1)} kg to go`}

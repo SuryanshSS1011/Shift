@@ -274,12 +274,12 @@ function DashboardContent() {
       <Header showMenu isDemoMode={demoMode.isDemoMode} />
 
       {/* Date display */}
-      <div className="px-4 py-3 max-w-lg mx-auto">
+      <div className="px-4 py-3 max-w-3xl mx-auto">
         <div className="text-green-400 text-sm text-right">{today}</div>
       </div>
 
       {/* Main content */}
-      <main className="px-4 py-6 max-w-lg mx-auto space-y-6">
+      <main className="px-4 py-6 max-w-3xl mx-auto space-y-6">
         {/* Today's Action */}
         <section>
           <h2 className="text-green-300 text-sm font-medium mb-3">
@@ -322,47 +322,53 @@ function DashboardContent() {
           )}
         </section>
 
-        {/* Grid Intensity */}
-        {data.grid && (
-          <section className="space-y-3">
-            <GridIntensityWidget
-              zone={data.grid.zone}
-              carbonIntensity={data.grid.carbonIntensity}
-              renewablePercent={data.grid.renewablePercent}
-            />
-            <GridForecastWidget
-              forecast={data.gridForecast}
-              isLoading={!data.gridForecast && !demoMode.isDemoMode}
+        {/* Two-column grid: Streak + Impact */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Streak */}
+          <section>
+            <h2 className="text-green-300 text-sm font-medium mb-3">
+              Your Streak
+            </h2>
+            <StreakDisplay
+              currentStreak={data.streak.current}
+              longestStreak={data.streak.longest}
             />
           </section>
-        )}
 
-        {/* Streak */}
-        <section>
-          <h2 className="text-green-300 text-sm font-medium mb-3">
-            Your Streak
-          </h2>
-          <StreakDisplay
-            currentStreak={data.streak.current}
-            longestStreak={data.streak.longest}
-          />
-        </section>
+          {/* Impact */}
+          <section>
+            <ImpactDashboard
+              totalCo2SavedKg={data.totals.totalCo2SavedKg}
+              totalDollarSaved={data.totals.totalDollarSaved}
+              totalActionsCompleted={data.totals.totalActionsCompleted}
+            />
+          </section>
+        </div>
 
-        {/* Impact */}
-        <section>
-          <ImpactDashboard
-            totalCo2SavedKg={data.totals.totalCo2SavedKg}
-            totalDollarSaved={data.totals.totalDollarSaved}
-            totalActionsCompleted={data.totals.totalActionsCompleted}
-          />
-        </section>
+        {/* Two-column grid: Grid Intensity + Activity Heatmap */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Grid Intensity */}
+          {data.grid && (
+            <section className="space-y-3">
+              <GridIntensityWidget
+                zone={data.grid.zone}
+                carbonIntensity={data.grid.carbonIntensity}
+                renewablePercent={data.grid.renewablePercent}
+              />
+              <GridForecastWidget
+                forecast={data.gridForecast}
+                isLoading={!data.gridForecast && !demoMode.isDemoMode}
+              />
+            </section>
+          )}
 
-        {/* Activity Heatmap */}
-        <section>
-          <ActivityHeatmap completedDates={data.completedDates} />
-        </section>
+          {/* Activity Heatmap */}
+          <section>
+            <ActivityHeatmap completedDates={data.completedDates} />
+          </section>
+        </div>
 
-        {/* Weekly Report */}
+        {/* Weekly Report - Full width */}
         <section>
           <WeeklyReport
             report={data.weeklyReport}

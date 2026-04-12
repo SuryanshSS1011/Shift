@@ -73,13 +73,23 @@ export function ForecastChart({
     )
   }
 
+  // Fixed scale for consistent severity zones: 0-200 green, 200-400 yellow, 400+ red
+  const yMin = 0
+  const yMax = 500
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="h-[160px] w-full"
+      className="h-[160px] w-full relative"
     >
+      {/* Severity color bands - fixed zones */}
+      <div className="absolute inset-0 flex flex-col pointer-events-none overflow-hidden rounded" style={{ left: '48px', right: '8px', top: '8px', bottom: '24px' }}>
+        <div className="bg-red-500/8 h-[20%] border-b border-red-500/20" /> {/* 400-500 */}
+        <div className="bg-yellow-500/8 h-[40%] border-b border-yellow-500/20" /> {/* 200-400 */}
+        <div className="bg-green-500/8 h-[40%]" /> {/* 0-200 */}
+      </div>
       <AreaChart
         data={chartData}
         index="hour"
@@ -89,10 +99,12 @@ export function ForecastChart({
         showGridLines={false}
         showYAxis={true}
         showXAxis={true}
-        yAxisWidth={40}
-        className="h-full"
+        yAxisWidth={48}
+        minValue={yMin}
+        maxValue={yMax}
+        className="h-full relative z-10"
         curveType="monotone"
-        valueFormatter={(value) => `${Math.round(value)} gCO₂`}
+        valueFormatter={(value) => `${Math.round(value)}g`}
         customTooltip={({ payload, active }) => {
           if (!active || !payload || payload.length === 0) return null
           const data = payload[0].payload

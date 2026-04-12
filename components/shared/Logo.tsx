@@ -25,7 +25,7 @@ const variantPaths: Record<LogoVariant, string> = {
   'reversed-green': '/brand/logo-reversed-green.svg',
 }
 
-export function Logo({ variant = 'full', size = 'md', className }: LogoProps) {
+export function Logo({ variant = 'reversed-dark', size = 'md', className }: LogoProps) {
   const isReversed = variant.startsWith('reversed')
   const sizeType = variant === 'mark' ? 'mark' : 'full'
   const dimensions = sizeConfig[size][sizeType]

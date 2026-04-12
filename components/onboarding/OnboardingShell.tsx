@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { Logo } from '@/components/shared/Logo'
 
 interface OnboardingShellProps {
   children: React.ReactNode
@@ -36,11 +37,8 @@ export function OnboardingShell({ children, showBackButton, onBack }: Onboarding
           </div>
 
           {/* Center - Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center group-hover:bg-green-500 transition-colors">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
-            <span className="text-xl font-bold text-green-50">Shift</span>
+          <Link href="/" className="flex items-center">
+            <Logo variant="reversed-dark" size="sm" />
           </Link>
 
           {/* Right - Exit link */}

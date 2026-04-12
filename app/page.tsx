@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { LogoMark } from '@/components/shared/Logo'
+import { Logo } from '@/components/shared/Logo'
 
 const impactStats = [
   { value: '2.5kg', label: 'avg CO₂ saved per action' },
@@ -55,11 +55,8 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <div className="mx-auto mb-6">
-              <LogoMark size={56} />
+              <Logo variant="reversed-dark" size="lg" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-green-50 mb-4">
-              Shift
-            </h1>
             <p className="text-xl md:text-2xl text-green-300 mb-2">
               One tiny action. One day at a time.
             </p>
@@ -230,9 +227,8 @@ export default function Home() {
       {/* Footer */}
       <footer className="px-4 py-8 border-t border-green-800/30">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <LogoMark size={32} />
-            <span className="text-lg font-bold text-green-50">Shift</span>
+          <div className="flex items-center justify-center mb-4">
+            <Logo variant="reversed-dark" size="sm" />
           </div>
           <p className="text-green-400 text-sm">
             Making sustainability accessible, one micro-action at a time.

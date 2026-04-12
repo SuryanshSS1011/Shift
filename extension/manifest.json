@@ -9,7 +9,9 @@
   "host_permissions": [
     "https://gemini.google.com/*",
     "https://api.ecologits.ai/*",
-    "https://eager-hare-51320-us1-vector.upstash.io/*"
+    "https://*.upstash.io/*",
+    "https://shift-jade.vercel.app/*",
+    "http://localhost:3000/*"
   ],
   "background": {
     "service_worker": "background.js"

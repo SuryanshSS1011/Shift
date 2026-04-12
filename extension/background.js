@@ -10,13 +10,22 @@ const ECOLOGITS_API_URL = "https://api.ecologits.ai/v1beta/estimations";
 // Config loaded from chrome.storage.sync (no hardcoded credentials)
 let config = {
   UPSTASH_VECTOR_URL: "",
-  UPSTASH_VECTOR_TOKEN: ""
+  UPSTASH_VECTOR_TOKEN: "",
+  SHIFT_API_URL: "https://shift-jade.vercel.app" // Default to production
+};
+
+// Average environmental impact per LLM query (from EcoLogits data)
+const AVG_IMPACT_PER_QUERY = {
+  energyWh: 0.5,
+  co2Grams: 0.3,
+  waterMl: 1.5
 };
 
 // Load config on startup
-chrome.storage.sync.get(["UPSTASH_VECTOR_URL", "UPSTASH_VECTOR_TOKEN"], (result) => {
+chrome.storage.sync.get(["UPSTASH_VECTOR_URL", "UPSTASH_VECTOR_TOKEN", "SHIFT_API_URL"], (result) => {
   if (result.UPSTASH_VECTOR_URL) config.UPSTASH_VECTOR_URL = result.UPSTASH_VECTOR_URL;
   if (result.UPSTASH_VECTOR_TOKEN) config.UPSTASH_VECTOR_TOKEN = result.UPSTASH_VECTOR_TOKEN;
+  if (result.SHIFT_API_URL) config.SHIFT_API_URL = result.SHIFT_API_URL;
   console.log("🔧 Shift: Config loaded", config.UPSTASH_VECTOR_URL ? "✓" : "⚠️ Missing URL");
 });
 
@@ -25,9 +34,32 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync") {
     if (changes.UPSTASH_VECTOR_URL) config.UPSTASH_VECTOR_URL = changes.UPSTASH_VECTOR_URL.newValue;
     if (changes.UPSTASH_VECTOR_TOKEN) config.UPSTASH_VECTOR_TOKEN = changes.UPSTASH_VECTOR_TOKEN.newValue;
+    if (changes.SHIFT_API_URL) config.SHIFT_API_URL = changes.SHIFT_API_URL.newValue;
     console.log("🔧 Shift: Config updated");
   }
 });
+
+// Track events to the Shift web app
+async function trackEvent(event, impacts = null) {
+  try {
+    const body = { event };
+    if (impacts) {
+      body.energyWh = impacts.energyWh || AVG_IMPACT_PER_QUERY.energyWh;
+      body.co2Grams = impacts.co2Grams || AVG_IMPACT_PER_QUERY.co2Grams;
+      body.waterMl = impacts.waterMl || AVG_IMPACT_PER_QUERY.waterMl;
+    }
+
+    await fetch(`${config.SHIFT_API_URL}/api/eco-llm-track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    console.log(`📊 Shift: Tracked ${event}`);
+  } catch (err) {
+    // Silent fail - tracking is non-critical
+    console.warn("⚠️ Shift: Failed to track event", err.message);
+  }
+}
 
 // Helper to check if config is valid
 function isConfigured() {
@@ -110,10 +142,14 @@ async function checkVectorDB(prompt) {
     // Semantic threshold (0.9 as defined in api.md)
     if (result.result && result.result.length > 0 && result.result[0].score > 0.9) {
       console.log("✅ Shift: Cache HIT (score:", result.result[0].score, ")");
+      // Track cache hit with environmental savings
+      trackEvent('cache_hit', AVG_IMPACT_PER_QUERY);
       return result.result[0].metadata?.value || null;
     }
     console.log("⬜ Shift: Cache MISS",
       result.result?.[0]?.score ? `(best score: ${result.result[0].score})` : "(no results)");
+    // Track cache miss
+    trackEvent('cache_miss');
     return null;
   } catch (err) {
     console.error("Upstash Check Error:", err);
@@ -147,6 +183,8 @@ async function saveToVectorDB(prompt, answer) {
     }
     const result = await response.json();
     console.log("💾 Shift: Upstash upsert-data success", result);
+    // Track prompt saved
+    trackEvent('prompt_saved');
   } catch (err) {
     console.error("Upstash Save Error:", err);
   }

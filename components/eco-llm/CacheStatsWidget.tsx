@@ -25,11 +25,13 @@ export function CacheStatsWidget({ metrics, isLoading }: CacheStatsWidgetProps) 
 
   const data = metrics || {
     totalPromptsCached: 0,
-    estimatedCacheHits: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
     cacheHitRate: 0,
   }
 
   const hitRatePercent = data.cacheHitRate * 100
+  const totalQueries = data.cacheHits + data.cacheMisses
 
   return (
     <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
@@ -37,26 +39,37 @@ export function CacheStatsWidget({ metrics, isLoading }: CacheStatsWidgetProps) 
         Semantic Cache Stats
       </h3>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         {/* Prompts Cached */}
         <div className="bg-[#0f1a0f] rounded-xl p-4">
-          <Text className="!text-green-400 mb-1">Prompts Cached</Text>
-          <div className="text-3xl font-bold text-green-50">
+          <Text className="!text-green-400 mb-1">Cached</Text>
+          <div className="text-2xl font-bold text-green-50">
             {data.totalPromptsCached}
           </div>
           <Text className="!text-green-400/70 text-xs">
-            in vector database
+            prompts
           </Text>
         </div>
 
         {/* Cache Hits */}
         <div className="bg-[#0f1a0f] rounded-xl p-4">
-          <Text className="!text-green-400 mb-1">Est. Cache Hits</Text>
-          <div className="text-3xl font-bold text-green-50">
-            {data.estimatedCacheHits}
+          <Text className="!text-green-400 mb-1">Hits</Text>
+          <div className="text-2xl font-bold text-green-50">
+            {data.cacheHits}
           </div>
           <Text className="!text-green-400/70 text-xs">
-            LLM calls avoided
+            LLM avoided
+          </Text>
+        </div>
+
+        {/* Cache Misses */}
+        <div className="bg-[#0f1a0f] rounded-xl p-4">
+          <Text className="!text-green-400 mb-1">Misses</Text>
+          <div className="text-2xl font-bold text-green-50">
+            {data.cacheMisses}
+          </div>
+          <Text className="!text-green-400/70 text-xs">
+            new queries
           </Text>
         </div>
       </div>

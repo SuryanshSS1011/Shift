@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCacheStats, calculateEnvironmentalSavings } from '@/lib/upstash-vector'
-import { getCached } from '@/lib/redis'
+import { getCacheStats } from '@/lib/upstash-vector'
+import { redis } from '@/lib/redis'
 
 export interface EcoLLMMetrics {
   totalPromptsCached: number
-  estimatedCacheHits: number
+  cacheHits: number
+  cacheMisses: number
   cacheHitRate: number
   energySavedWh: number
   co2SavedGrams: number
@@ -16,46 +17,54 @@ export interface EcoLLMMetrics {
   }
 }
 
-// Cache key for tracking cache hit count
-const CACHE_HIT_KEY = 'eco-llm:cache-hits'
+// Redis keys for tracking (same as eco-llm-track)
+const KEYS = {
+  cacheHits: 'eco-llm:cache-hits',
+  cacheMisses: 'eco-llm:cache-misses',
+  totalEnergySaved: 'eco-llm:total-energy-wh',
+  totalCo2Saved: 'eco-llm:total-co2-grams',
+  totalWaterSaved: 'eco-llm:total-water-ml',
+}
 
 export async function GET(request: NextRequest) {
   try {
-    // Get cache stats from Upstash Vector (cached for 5 minutes)
-    const stats = await getCached(
-      'eco-llm:stats',
-      async () => {
-        const cacheStats = await getCacheStats()
-        return cacheStats
-      },
-      300 // 5-minute TTL
-    )
+    // Get vector DB stats and Redis tracking data in parallel
+    const [vectorStats, cacheHits, cacheMisses, energySaved, co2Saved, waterSaved] =
+      await Promise.all([
+        getCacheStats().catch(() => ({ totalVectors: 0, dimension: 0, pendingVectorCount: 0 })),
+        redis.get(KEYS.cacheHits),
+        redis.get(KEYS.cacheMisses),
+        redis.get(KEYS.totalEnergySaved),
+        redis.get(KEYS.totalCo2Saved),
+        redis.get(KEYS.totalWaterSaved),
+      ])
 
-    // Estimate cache hits (in a real implementation, this would be tracked)
-    // For now, estimate based on vector count (assume 30% hit rate)
-    const estimatedCacheHits = Math.floor(stats.totalVectors * 0.3)
-    const cacheHitRate = stats.totalVectors > 0 ? 0.3 : 0
+    const hits = Number(cacheHits) || 0
+    const misses = Number(cacheMisses) || 0
+    const total = hits + misses
 
-    // Calculate environmental savings
-    const savings = calculateEnvironmentalSavings(estimatedCacheHits)
+    const energyWh = Number(energySaved) || 0
+    const co2Grams = Number(co2Saved) || 0
+    const waterMl = Number(waterSaved) || 0
 
     // Calculate equivalencies
     const equivalencies = {
       // 1 smartphone charge ≈ 10 Wh
-      smartphoneCharges: Math.round(savings.energySavedWh / 10 * 10) / 10,
+      smartphoneCharges: Math.round(energyWh / 10 * 10) / 10,
       // 1 LED bulb hour ≈ 10 Wh
-      ledBulbHours: Math.round(savings.energySavedWh / 10 * 10) / 10,
+      ledBulbHours: Math.round(energyWh / 10 * 10) / 10,
       // 1g CO2 ≈ driving 4 meters in avg car
-      drivingMeters: Math.round(savings.co2SavedGrams * 4),
+      drivingMeters: Math.round(co2Grams * 4),
     }
 
     const metrics: EcoLLMMetrics = {
-      totalPromptsCached: stats.totalVectors,
-      estimatedCacheHits,
-      cacheHitRate,
-      energySavedWh: Math.round(savings.energySavedWh * 100) / 100,
-      co2SavedGrams: Math.round(savings.co2SavedGrams * 100) / 100,
-      waterSavedMl: Math.round(savings.waterSavedMl * 100) / 100,
+      totalPromptsCached: vectorStats.totalVectors,
+      cacheHits: hits,
+      cacheMisses: misses,
+      cacheHitRate: total > 0 ? Math.round((hits / total) * 100) / 100 : 0,
+      energySavedWh: Math.round(energyWh * 100) / 100,
+      co2SavedGrams: Math.round(co2Grams * 100) / 100,
+      waterSavedMl: Math.round(waterMl * 100) / 100,
       equivalencies,
     }
 
@@ -71,7 +80,8 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         totalPromptsCached: 0,
-        estimatedCacheHits: 0,
+        cacheHits: 0,
+        cacheMisses: 0,
         cacheHitRate: 0,
         energySavedWh: 0,
         co2SavedGrams: 0,

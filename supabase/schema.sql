@@ -1,5 +1,4 @@
 -- Shift Database Schema
--- Run this SQL in the Supabase SQL editor to create all tables and functions
 
 -- ============================================
 -- TABLE: users

@@ -46,7 +46,7 @@ export function Header({ showBackButton, onBack, showMenu = false, isDemoMode = 
       animate={{ opacity: 1, y: 0 }}
       className="px-4 py-4 border-b border-green-800/30 bg-[#0f1a0f]/95 backdrop-blur-sm sticky top-0 z-50"
     >
-      <div className="max-w-3xl mx-auto flex items-center justify-between">
+      <div className="flex items-center justify-between">
         {/* Left side - Back button or Logo */}
         <div className="flex items-center gap-3">
           {showBackButton && onBack ? (

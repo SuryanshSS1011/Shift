@@ -34,7 +34,20 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
   const router = useRouter()
 
   const handleStart = () => {
-    router.push('/dashboard')
+    // Verify sessionId exists in localStorage before navigating
+    const sessionId = localStorage.getItem('shift_session_id')
+    if (sessionId) {
+      router.push('/dashboard')
+    } else {
+      console.error('[ProfileReveal] Session ID not found in localStorage')
+      // Retry after a brief delay in case of timing issue
+      setTimeout(() => {
+        const retrySessionId = localStorage.getItem('shift_session_id')
+        if (retrySessionId) {
+          router.push('/dashboard')
+        }
+      }, 100)
+    }
   }
 
   return (

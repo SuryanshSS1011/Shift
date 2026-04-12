@@ -9,6 +9,7 @@ interface CelebrationOverlayProps {
   onClose: () => void
   co2Saved: number
   streak: number
+  pointsEarned?: number
   totalCo2Saved?: number
   totalActionsCompleted?: number
 }
@@ -18,6 +19,7 @@ export function CelebrationOverlay({
   onClose,
   co2Saved,
   streak,
+  pointsEarned = 0,
   totalCo2Saved = 0,
   totalActionsCompleted = 0,
 }: CelebrationOverlayProps) {
@@ -87,10 +89,22 @@ export function CelebrationOverlay({
               transition={{ delay: 0.4 }}
               className="mb-4"
             >
-              <span className="text-4xl font-bold text-green-400">
-                {co2Saved} kg
-              </span>
-              <p className="text-green-300 text-sm">CO₂ saved today</p>
+              <div className="flex items-center justify-center gap-3">
+                <div>
+                  <span className="text-4xl font-bold text-green-400">
+                    {co2Saved} kg
+                  </span>
+                  <p className="text-green-300 text-sm">CO₂ saved</p>
+                </div>
+                {pointsEarned > 0 && (
+                  <div>
+                    <span className="text-4xl font-bold text-yellow-400">
+                      +{pointsEarned}
+                    </span>
+                    <p className="text-yellow-300 text-sm">points</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
 
             {/* Streak */}

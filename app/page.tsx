@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { LogoMark } from '@/components/shared/Logo'
 
 const impactStats = [
   { value: '2.5kg', label: 'avg CO₂ saved per action' },
@@ -53,8 +54,8 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="w-12 h-12 bg-green-600 rounded-full mx-auto mb-6 flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">S</span>
+            <div className="mx-auto mb-6">
+              <LogoMark size={56} />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-green-50 mb-4">
               Shift
@@ -230,9 +231,7 @@ export default function Home() {
       <footer className="px-4 py-8 border-t border-green-800/30">
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
+            <LogoMark size={32} />
             <span className="text-lg font-bold text-green-50">Shift</span>
           </div>
           <p className="text-green-400 text-sm">

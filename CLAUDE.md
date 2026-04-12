@@ -736,20 +736,18 @@ RESEND_API_KEY=
 - ✅ Grid forecast
 - ✅ PWA, PostHog, Sentry
 - ✅ 9 additional API routes (13 total)
+- ✅ Points system (`lib/points.ts`, DB columns, MicroActionCard badge, ImpactDashboard, CelebrationOverlay)
+- ✅ SDG tags (`data/sdgs.json`, SDGBadge component, MicroActionCard badges)
+- ✅ AI cost transparency (`lib/carbon-estimation.ts`, MicroActionCard AI cost line)
+- ✅ Impact projection (`lib/emissions/projection.ts`, ImpactProjection component)
+- ✅ Category streaks (category_streaks table, CategoryStreaks component)
+- ✅ Shareable impact card (`/share/[sessionId]`, ImpactShareCard component, OG metadata)
+- ✅ Dashboard share button with clipboard copy
 
-**In progress (current session):**
-- 🔄 Points system (formula, DB columns, UI badges)
-- 🔄 SDG tags on action library + SDGBadge component
-- 🔄 AI cost transparency on MicroActionCard
-- 🔄 Impact projection (lib + UI card)
-- 🔄 Category streaks table + CategoryStreaks component
-- 🔄 Shareable impact card (/share/[sessionId])
-
-**Remaining after current session:**
-- Dashboard UI: MicroActionCard, ImpactDashboard, StreakDisplay, ActivityHeatmap, CelebrationOverlay, WeeklyReport, GridIntensityWidget, GridForecastChart, ImpactProjection, CategoryStreaks
-- Eco-LLM dashboard UI components
-- ImpactShareCard + /share route
-- Polish, demo mode wiring, responsive mobile, production deploy
+**Remaining:**
+- Polish, responsive mobile testing
+- Update action-library.json with sdgTags for all 190 actions (currently using default SDGs by category)
+- Production deploy
 
 ---
 

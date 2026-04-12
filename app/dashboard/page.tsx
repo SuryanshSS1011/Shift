@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
+import { Share2 } from 'lucide-react'
 import { Header } from '@/components/shared/Header'
 import { MicroActionCard, MicroActionCardSkeleton } from '@/components/dashboard/MicroActionCard'
 import { StreakDisplay } from '@/components/dashboard/StreakDisplay'
@@ -12,8 +14,13 @@ import { GridForecastWidget } from '@/components/dashboard/GridForecastWidget'
 import { CelebrationOverlay } from '@/components/dashboard/CelebrationOverlay'
 import { ActivityHeatmap } from '@/components/dashboard/ActivityHeatmap'
 import { WeeklyReport } from '@/components/dashboard/WeeklyReport'
+import { CategoryStreaks } from '@/components/dashboard/CategoryStreaks'
+import { ImpactProjection } from '@/components/dashboard/ImpactProjection'
 import { useDemoMode } from '@/lib/hooks/useDemoMode'
 import type { GridForecastResponse } from '@/types/grid'
+import type { CategoryStreak } from '@/types/impact'
+import type { MicroAction } from '@/types/action'
+import type { LevelName } from '@/lib/points'
 
 interface Action {
   id: string
@@ -26,6 +33,9 @@ interface Action {
   timeRequiredMinutes: number
   difficultyLevel: string
   equivalencyLabel: string
+  sdgTags?: number[]
+  points?: number
+  aiCostCo2Grams?: number
   completed: boolean
 }
 
@@ -44,15 +54,22 @@ interface WeeklyReportData {
 interface DashboardData {
   action: Action | null
   streak: { current: number; longest: number }
+  categoryStreaks: CategoryStreak[]
   totals: {
     totalCo2SavedKg: number
     totalDollarSaved: number
     totalActionsCompleted: number
+    totalPoints: number
+    level: LevelName
+    levelEmoji: string
   }
   grid: GridData | null
   gridForecast: GridForecastResponse | null
   completedDates: string[]
   weeklyReport: WeeklyReportData | null
+  recentActions: MicroAction[]
+  goalDuration: number
+  goalStartDate: string
 }
 
 function DashboardContent() {
@@ -66,11 +83,22 @@ function DashboardContent() {
   const [data, setData] = useState<DashboardData>({
     action: null,
     streak: { current: 0, longest: 0 },
-    totals: { totalCo2SavedKg: 0, totalDollarSaved: 0, totalActionsCompleted: 0 },
+    categoryStreaks: [],
+    totals: {
+      totalCo2SavedKg: 0,
+      totalDollarSaved: 0,
+      totalActionsCompleted: 0,
+      totalPoints: 0,
+      level: 'Seedling',
+      levelEmoji: '🌱',
+    },
     grid: null,
     gridForecast: null,
     completedDates: [],
     weeklyReport: null,
+    recentActions: [],
+    goalDuration: 14,
+    goalStartDate: new Date().toISOString().split('T')[0],
   })
 
   // Get session ID (demo mode uses hardcoded)
@@ -92,11 +120,47 @@ function DashboardContent() {
         date.setDate(date.getDate() - offset)
         demoDates.push(date.toISOString().split('T')[0])
       }
+      // Demo category streaks
+      const demoCategoryStreaks: CategoryStreak[] = [
+        { category: 'food', currentStreak: 4, longestStreak: 4, lastActionDate: new Date().toISOString().split('T')[0] },
+        { category: 'energy', currentStreak: 7, longestStreak: 7, lastActionDate: new Date().toISOString().split('T')[0] },
+        { category: 'transport', currentStreak: 2, longestStreak: 5, lastActionDate: new Date().toISOString().split('T')[0] },
+      ]
+
+      // Demo recent actions for projection
+      const demoRecentActions: MicroAction[] = Array.from({ length: 7 }, (_, i) => ({
+        id: `demo-${i}`,
+        userId: 'demo',
+        actionDate: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        category: ['food', 'transport', 'energy'][i % 3] as MicroAction['category'],
+        title: 'Demo action',
+        description: 'Demo description',
+        anchorHabit: 'After morning',
+        co2SavingsKg: 1.2 + (i * 0.3),
+        dollarSavings: 2.0 + (i * 0.5),
+        timeRequiredMinutes: 5,
+        difficultyLevel: 'easy',
+        behavioralFrame: 'values',
+        equivalencyLabel: '= 3 miles',
+        sdgTags: [13, 12],
+        points: 15 + i * 2,
+        aiCostCo2Grams: 0.08,
+        completed: true,
+        completedAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+      }))
+
       setData((prev) => ({
         ...prev,
-        action: demoMode.action,
+        action: { ...demoMode.action, sdgTags: [13, 2, 12], points: 17, aiCostCo2Grams: 0.08 },
         streak: demoMode.streak,
-        totals: demoMode.totals,
+        categoryStreaks: demoCategoryStreaks,
+        totals: {
+          ...demoMode.totals,
+          totalPoints: 847,
+          level: 'Sprout',
+          levelEmoji: '🌿',
+        },
         grid: demoMode.grid,
         gridForecast: demoMode.gridForecast,
         completedDates: demoDates,
@@ -105,6 +169,9 @@ function DashboardContent() {
           patternObserved: "Your actions tend to be strongest in the morning, particularly around breakfast and commute decisions. Evening energy habits could use more attention.",
           focusThisWeek: "Try unplugging devices before bed — it's a quick win that compounds over time. Your transit choices have been excellent, keep that momentum going.",
         },
+        recentActions: demoRecentActions,
+        goalDuration: 14,
+        goalStartDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       }))
       setIsLoading(false)
       return
@@ -249,7 +316,15 @@ function DashboardContent() {
           ...prev,
           action: prev.action ? { ...prev.action, completed: true } : null,
           streak: result.data.streak,
-          totals: result.data.totals,
+          categoryStreaks: result.data.categoryStreaks || prev.categoryStreaks,
+          totals: {
+            totalCo2SavedKg: result.data.totals.totalCo2SavedKg,
+            totalDollarSaved: result.data.totals.totalDollarSaved,
+            totalActionsCompleted: result.data.totals.totalActionsCompleted,
+            totalPoints: result.data.totals.totalPoints || 0,
+            level: result.data.totals.level || 'Seedling',
+            levelEmoji: result.data.totals.levelEmoji || '🌱',
+          },
         }))
         setShowCelebration(true)
       }
@@ -270,14 +345,32 @@ function DashboardContent() {
     day: 'numeric',
   })
 
+  // Handle share button click
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/share/${sessionId}`
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success('Share link copied to clipboard!')
+    } catch {
+      toast.error('Failed to copy link')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0f1a0f]">
       {/* Header with Menu */}
       <Header showMenu isDemoMode={demoMode.isDemoMode} />
 
-      {/* Date display */}
-      <div className="px-4 py-3 max-w-3xl mx-auto">
-        <div className="text-green-400 text-sm text-right">{today}</div>
+      {/* Date display + Share button */}
+      <div className="px-4 py-3 max-w-3xl mx-auto flex justify-between items-center">
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-2 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg transition-colors text-sm"
+        >
+          <Share2 className="w-4 h-4" />
+          Share Impact
+        </button>
+        <div className="text-green-400 text-sm">{today}</div>
       </div>
 
       {/* Main content */}
@@ -338,12 +431,31 @@ function DashboardContent() {
           </div>
         </section>
 
+        {/* Category Streaks */}
+        {data.categoryStreaks.length > 0 && (
+          <section>
+            <CategoryStreaks streaks={data.categoryStreaks} />
+          </section>
+        )}
+
         {/* Impact - Full width */}
         <section>
           <ImpactDashboard
             totalCo2SavedKg={data.totals.totalCo2SavedKg}
             totalDollarSaved={data.totals.totalDollarSaved}
             totalActionsCompleted={data.totals.totalActionsCompleted}
+            totalPoints={data.totals.totalPoints}
+            level={data.totals.level}
+            levelEmoji={data.totals.levelEmoji}
+          />
+        </section>
+
+        {/* Impact Projection */}
+        <section>
+          <ImpactProjection
+            recentActions={data.recentActions}
+            goalDuration={data.goalDuration}
+            goalStartDate={data.goalStartDate}
           />
         </section>
 

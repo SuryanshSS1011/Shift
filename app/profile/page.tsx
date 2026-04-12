@@ -168,9 +168,9 @@ export default function ProfilePage() {
           className="text-center"
         >
           <div className="w-20 h-20 bg-green-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-3xl">
-              {labelMaps.primaryMotivation[profile.primaryMotivation as keyof typeof labelMaps.primaryMotivation]?.icon || '🌱'}
-            </span>
+            <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
           </div>
           <h1 className="text-2xl font-bold text-green-50 mb-1">{profile.city}</h1>
           <p className="text-green-400 text-sm">Member since {memberSince}</p>

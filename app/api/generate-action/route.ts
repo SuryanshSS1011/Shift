@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       goalDuration: user.goal_duration || 14,
       goalStartDate: user.goal_start_date || new Date().toISOString().split('T')[0],
       goalEndDate: user.goal_end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      actionFrequency: user.action_frequency || 'daily',
+      actionFrequency: user.action_frequency || 24,
       preferredTime: user.preferred_time || 'morning',
       difficultyPreference: user.difficulty_preference || 'start_easy',
       focusAreas: (user.focus_areas || ['food', 'energy', 'transport']) as ActionCategory[],

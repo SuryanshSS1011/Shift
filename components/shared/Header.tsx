@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Logo } from './Logo'
 
 interface HeaderProps {
   showBackButton?: boolean
@@ -60,11 +61,8 @@ export function Header({ showBackButton, onBack, showMenu = false, isDemoMode = 
             </button>
           ) : null}
 
-          <Link href={hasSession ? "/dashboard" : "/"} className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center group-hover:bg-green-500 transition-colors">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
-            <span className="text-xl font-bold text-green-50">Shift</span>
+          <Link href={hasSession ? "/dashboard" : "/"} className="flex items-center group hover:opacity-90 transition-opacity">
+            <Logo variant="full" size="sm" />
           </Link>
 
           {isDemoMode && (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -80,6 +80,7 @@ function DashboardContent() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [data, setData] = useState<DashboardData>({
     action: null,
     streak: { current: 0, longest: 0 },
@@ -101,14 +102,10 @@ function DashboardContent() {
     goalStartDate: new Date().toISOString().split('T')[0],
   })
 
-  // Ref to prevent useEffect from running multiple times
-  const hasInitialized = useRef(false)
-
   // Get session ID (demo mode uses hardcoded)
   useEffect(() => {
-    // Only run initialization once to prevent race conditions
-    if (hasInitialized.current) return
-    hasInitialized.current = true
+    // Skip if already redirecting or sessionId already set
+    if (isRedirecting || sessionId) return
 
     if (demoMode.isDemoMode) {
       setSessionId(demoMode.sessionId)
@@ -184,14 +181,15 @@ function DashboardContent() {
       return
     }
 
-    // Check session - ref guard prevents re-runs
+    // Check session
     const storedSessionId = localStorage.getItem('shift_session_id')
     if (!storedSessionId) {
+      setIsRedirecting(true)
       router.replace('/onboarding')
       return
     }
     setSessionId(storedSessionId)
-  }, [router, demoMode.isDemoMode])
+  }, [demoMode.isDemoMode, sessionId, isRedirecting, router])
 
   // Fetch today's action
   const fetchAction = useCallback(async () => {

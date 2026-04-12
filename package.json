@@ -20,6 +20,7 @@
     "@tremor/react": "^3.18.7",
     "@types/canvas-confetti": "^1.9.0",
     "@upstash/redis": "^1.37.0",
+    "@upstash/vector": "^1.2.3",
     "ai": "^6.0.158",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",

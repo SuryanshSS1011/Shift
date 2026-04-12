@@ -1,27 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z, ZodError } from 'zod'
 import { supabase } from '@/lib/supabase'
+
+// Input validation schema
+const InputSchema = z.object({
+  sessionId: z.string().min(1, 'sessionId is required'),
+  actionId: z.string().uuid('actionId must be a valid UUID'),
+})
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sessionId, actionId } = body as {
-      sessionId: string
-      actionId: string
-    }
 
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: 'sessionId is required' },
-        { status: 400 }
-      )
-    }
-
-    if (!actionId) {
-      return NextResponse.json(
-        { error: 'actionId is required' },
-        { status: 400 }
-      )
-    }
+    // Validate input with Zod
+    const { sessionId, actionId } = InputSchema.parse(body)
 
     // Get user
     const { data: user, error: userError } = await supabase
@@ -60,11 +52,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark action as completed
+    const completedAt = new Date().toISOString()
     const { error: updateError } = await supabase
       .from('actions')
       .update({
         completed: true,
-        completed_at: new Date().toISOString(),
+        completed_at: completedAt,
       })
       .eq('id', actionId)
 
@@ -94,14 +87,18 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (currentTotals) {
-      await supabase
+      const { error: totalsError } = await supabase
         .from('impact_totals')
         .update({
-          total_co2_saved_kg: (currentTotals.total_co2_saved_kg || 0) + action.co2_savings_kg,
-          total_dollar_saved: (currentTotals.total_dollar_saved || 0) + action.dollar_savings,
+          total_co2_saved_kg: (currentTotals.total_co2_saved_kg || 0) + (action.co2_savings_kg || 0),
+          total_dollar_saved: (currentTotals.total_dollar_saved || 0) + (action.dollar_savings || 0),
           total_actions_completed: (currentTotals.total_actions_completed || 0) + 1,
         })
         .eq('user_id', user.id)
+
+      if (totalsError) {
+        console.error('[complete-action] Totals update error:', totalsError)
+      }
     }
 
     // Get updated streak for response
@@ -123,7 +120,7 @@ export async function POST(request: NextRequest) {
       data: {
         actionId,
         completed: true,
-        completedAt: new Date().toISOString(),
+        completedAt,
         co2Saved: action.co2_savings_kg,
         dollarSaved: action.dollar_savings,
         streak: {
@@ -138,6 +135,14 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
+    // Handle Zod validation errors as 400
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.issues },
+        { status: 400 }
+      )
+    }
+
     console.error('[complete-action] Error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

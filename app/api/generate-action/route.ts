@@ -1,24 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z, ZodError } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { generateWithFallback } from '@/lib/ai'
 import { MicroActionOutputSchema } from '@/lib/schemas'
 import { buildActionPrompt } from '@/lib/prompts/action-generator'
 import { SUSTAINABILITY_COACH_SYSTEM_PROMPT } from '@/lib/prompts/system-prompt'
-import { searchActions, getFallbackAction } from '@/lib/knowledge-base'
+import { searchActions, getFallbackAction, getActionById } from '@/lib/knowledge-base'
+import { getWeather } from '@/lib/open-meteo'
+import { getGridIntensity } from '@/lib/electricity-maps'
 import type { UserProfile } from '@/types/user'
 import type { ActionCategory } from '@/types/action'
+
+// Input validation schema
+const InputSchema = z.object({
+  sessionId: z.string().min(1, 'sessionId is required'),
+})
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sessionId } = body as { sessionId: string }
 
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: 'sessionId is required' },
-        { status: 400 }
-      )
-    }
+    // Validate input with Zod
+    const { sessionId } = InputSchema.parse(body)
 
     // Get user profile
     const { data: user, error: userError } = await supabase
@@ -46,7 +49,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingAction) {
-      // Return existing action instead of generating a new one
       return NextResponse.json({
         success: true,
         data: {
@@ -87,6 +89,31 @@ export async function POST(request: NextRequest) {
 
     const recentActionIds = recentActions?.map(a => a.id) || []
 
+    // Fetch weather data (cached)
+    let weatherData: { temperature: number; description: string } | undefined
+    if (user.lat && user.lng) {
+      try {
+        weatherData = await getWeather(user.lat, user.lng)
+      } catch (weatherError) {
+        console.error('[generate-action] Weather fetch error:', weatherError)
+      }
+    }
+
+    // Fetch grid intensity (cached) and check renewable percentage
+    let gridData: { renewablePercent: number; carbonIntensity: number } | undefined
+    let biasEnergyActions = false
+    if (user.lat && user.lng) {
+      try {
+        gridData = await getGridIntensity(user.lat, user.lng)
+        // If grid is >50% renewable, bias toward energy actions
+        if (gridData.renewablePercent > 50) {
+          biasEnergyActions = true
+        }
+      } catch (gridError) {
+        console.error('[generate-action] Grid intensity error:', gridError)
+      }
+    }
+
     // Build user profile for search
     const profile: UserProfile = {
       id: user.id,
@@ -104,11 +131,15 @@ export async function POST(request: NextRequest) {
       createdAt: user.created_at,
     }
 
+    // If grid is highly renewable, add 'energy' to top impact areas for biasing
+    if (biasEnergyActions && !profile.topImpactAreas.includes('energy')) {
+      profile.topImpactAreas = ['energy', ...profile.topImpactAreas.slice(0, 2)]
+    }
+
     // Search for best candidate actions
     const candidates = searchActions(profile, recentActionIds, currentStreak, 5)
 
     if (candidates.length === 0) {
-      // No matching candidates - use fallback
       const fallback = getFallbackAction(profile)
       if (!fallback) {
         return NextResponse.json(
@@ -119,35 +150,77 @@ export async function POST(request: NextRequest) {
       candidates.push(fallback)
     }
 
+    // Build enhanced prompt with weather, grid intensity, and commute CO2 data
+    let enhancedPromptContext = ''
+    if (weatherData) {
+      enhancedPromptContext += `\nWEATHER: ${weatherData.temperature}F, ${weatherData.description}`
+    }
+    if (gridData) {
+      enhancedPromptContext += `\nGRID: ${gridData.renewablePercent}% renewable, ${gridData.carbonIntensity} gCO2/kWh`
+      if (biasEnergyActions) {
+        enhancedPromptContext += ' (great day for energy savings - grid is clean!)'
+      }
+    }
+    if (user.car_co2_kg_per_trip && user.transit_co2_kg_per_trip) {
+      enhancedPromptContext += `\nCOMMUTE CO2: Car ${user.car_co2_kg_per_trip.toFixed(2)} kg/trip, Transit ${user.transit_co2_kg_per_trip.toFixed(2)} kg/trip`
+      if (user.daily_savings_if_switched) {
+        enhancedPromptContext += `, Potential daily savings: ${user.daily_savings_if_switched.toFixed(2)} kg`
+      }
+    }
+
     // Generate personalized action with AI
     let actionOutput
     try {
+      const basePrompt = buildActionPrompt(profile, candidates, currentStreak, weatherData)
+      const fullPrompt = basePrompt + enhancedPromptContext
+
       actionOutput = await generateWithFallback(
         MicroActionOutputSchema,
         {
           system: SUSTAINABILITY_COACH_SYSTEM_PROMPT,
-          user: buildActionPrompt(profile, candidates, currentStreak),
+          user: fullPrompt,
         },
-        0.6 // Medium temperature for variety
+        0.6
       )
     } catch (aiError) {
       console.error('[generate-action] AI generation failed:', aiError)
-      // Use first candidate as fallback
-      const fallbackCandidate = candidates[0]
-      actionOutput = {
-        title: fallbackCandidate.title,
-        description: fallbackCandidate.descriptionTemplate
-          .replace('{anchor}', 'finish your morning routine')
-          .replace('{co2}', fallbackCandidate.co2SavingsKgPerOccurrence.toString())
-          .replace('{dollars}', fallbackCandidate.dollarSavingsPerOccurrence.toFixed(2)),
-        anchorHabit: 'After you finish your morning routine',
-        co2SavingsKg: fallbackCandidate.co2SavingsKgPerOccurrence,
-        dollarSavings: fallbackCandidate.dollarSavingsPerOccurrence,
-        timeRequiredMinutes: fallbackCandidate.timeRequiredMinutes,
-        difficultyLevel: fallbackCandidate.difficulty,
-        behavioralFrame: fallbackCandidate.behavioralFramePrimary,
-        equivalencyLabel: fallbackCandidate.equivalencyLabel,
-        category: fallbackCandidate.category,
+
+      // Try static fallback from knowledge base
+      const staticFallback = getActionById(candidates[0]?.id || 'food-001')
+      if (staticFallback) {
+        actionOutput = {
+          title: staticFallback.title,
+          description: staticFallback.descriptionTemplate
+            .replace('{anchor}', 'finish your morning routine')
+            .replace('{co2}', staticFallback.co2SavingsKgPerOccurrence.toString())
+            .replace('{dollars}', staticFallback.dollarSavingsPerOccurrence.toFixed(2)),
+          anchorHabit: 'After you finish your morning routine',
+          co2SavingsKg: staticFallback.co2SavingsKgPerOccurrence,
+          dollarSavings: staticFallback.dollarSavingsPerOccurrence,
+          timeRequiredMinutes: staticFallback.timeRequiredMinutes,
+          difficultyLevel: staticFallback.difficulty,
+          behavioralFrame: staticFallback.behavioralFramePrimary,
+          equivalencyLabel: staticFallback.equivalencyLabel,
+          category: staticFallback.category,
+        }
+      } else {
+        // Last resort fallback
+        const fallbackCandidate = candidates[0]
+        actionOutput = {
+          title: fallbackCandidate.title,
+          description: fallbackCandidate.descriptionTemplate
+            .replace('{anchor}', 'finish your morning routine')
+            .replace('{co2}', fallbackCandidate.co2SavingsKgPerOccurrence.toString())
+            .replace('{dollars}', fallbackCandidate.dollarSavingsPerOccurrence.toFixed(2)),
+          anchorHabit: 'After you finish your morning routine',
+          co2SavingsKg: fallbackCandidate.co2SavingsKgPerOccurrence,
+          dollarSavings: fallbackCandidate.dollarSavingsPerOccurrence,
+          timeRequiredMinutes: fallbackCandidate.timeRequiredMinutes,
+          difficultyLevel: fallbackCandidate.difficulty,
+          behavioralFrame: fallbackCandidate.behavioralFramePrimary,
+          equivalencyLabel: fallbackCandidate.equivalencyLabel,
+          category: fallbackCandidate.category,
+        }
       }
     }
 
@@ -198,8 +271,20 @@ export async function POST(request: NextRequest) {
         actionDate: newAction.action_date,
       },
       isExisting: false,
+      context: {
+        weather: weatherData,
+        gridRenewablePercent: gridData?.renewablePercent,
+      },
     })
   } catch (error) {
+    // Handle Zod validation errors as 400
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.issues },
+        { status: 400 }
+      )
+    }
+
     console.error('[generate-action] Error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

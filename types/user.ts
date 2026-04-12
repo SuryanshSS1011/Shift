@@ -7,6 +7,8 @@ export interface OnboardingAnswers {
   primaryBarrier: 'time' | 'cost' | 'knowledge' | 'overwhelmed'
   primaryMotivation: 'planet' | 'money' | 'health' | 'community'
   city: string
+  homeAddress?: string
+  workAddress?: string
 }
 
 export interface UserProfile {

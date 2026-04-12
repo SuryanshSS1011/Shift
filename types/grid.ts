@@ -13,6 +13,7 @@ export interface GridForecast {
     startHour: number
     endHour: number
     avgIntensity: number
+    level: BestTimeLevel
   }
   worstWindow: {
     startHour: number
@@ -20,6 +21,8 @@ export interface GridForecast {
     avgIntensity: number
   }
 }
+
+export type BestTimeLevel = 'low' | 'moderate_fallback' | 'high_all_day'
 
 export interface GridForecastResponse {
   zone: string
@@ -29,6 +32,7 @@ export interface GridForecastResponse {
     startHour: number
     endHour: number
     intensity: number
+    level: BestTimeLevel
   }
   currentIntensity: number
   currentLevel: IntensityLevel

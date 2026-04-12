@@ -93,6 +93,7 @@ const DEMO_GRID_FORECAST: GridForecastResponse = {
     startHour: 11,
     endHour: 13,
     intensity: 178,
+    level: 'low',
   },
   currentIntensity: 287,
   currentLevel: 'moderate',

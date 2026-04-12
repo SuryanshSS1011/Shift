@@ -1,5 +1,5 @@
 import { getCached, redis } from './redis'
-import type { ForecastDataPoint, GridForecast, IntensityLevel } from '@/types/grid'
+import type { ForecastDataPoint, GridForecast, IntensityLevel, BestTimeLevel } from '@/types/grid'
 
 export interface GridIntensity {
   zone: string
@@ -107,72 +107,128 @@ function generateHeuristicForecast(): ForecastDataPoint[] {
   return forecast
 }
 
+export interface BestWindowResult {
+  startHour: number
+  endHour: number
+  avgIntensity: number
+  level: BestTimeLevel
+}
+
 /**
- * Find the next green time window (carbon intensity < 200)
- * Returns the next closest green hour(s) as a contiguous range
+ * Find the best time window for energy use
+ * - Returns green window if any hours < 200 gCO₂
+ * - Falls back to two lowest yellow hours (200-400) with warning
+ * - Returns high_all_day warning if all hours > 400
  */
 export function findNextGreenWindow(
   forecast: ForecastDataPoint[]
-): { startHour: number; endHour: number; avgIntensity: number } {
+): BestWindowResult {
   if (forecast.length === 0) {
-    return { startHour: 10, endHour: 12, avgIntensity: 180 }
+    return { startHour: 10, endHour: 12, avgIntensity: 180, level: 'low' }
   }
 
   const GREEN_THRESHOLD = 200
+  const RED_THRESHOLD = 400
 
   // Find all green hours
   const greenIndices: number[] = []
+  const yellowIndices: number[] = []
+
   for (let i = 0; i < forecast.length; i++) {
-    if (forecast[i].carbonIntensity < GREEN_THRESHOLD) {
+    const intensity = forecast[i].carbonIntensity
+    if (intensity < GREEN_THRESHOLD) {
       greenIndices.push(i)
+    } else if (intensity < RED_THRESHOLD) {
+      yellowIndices.push(i)
     }
   }
 
-  // If no green hours, find the lowest intensity hour
-  if (greenIndices.length === 0) {
-    let minIndex = 0
-    let minIntensity = Infinity
-    for (let i = 0; i < forecast.length; i++) {
-      if (forecast[i].carbonIntensity < minIntensity) {
-        minIntensity = forecast[i].carbonIntensity
-        minIndex = i
+  // If we have green hours, return the first contiguous green window
+  if (greenIndices.length > 0) {
+    const firstGreenIndex = greenIndices[0]
+    let endIndex = firstGreenIndex
+
+    // Extend to include contiguous green hours
+    for (let i = 1; i < greenIndices.length; i++) {
+      if (greenIndices[i] === greenIndices[i - 1] + 1) {
+        endIndex = greenIndices[i]
+      } else {
+        break
       }
     }
-    const hour = new Date(forecast[minIndex].datetime).getHours()
+
+    let totalIntensity = 0
+    for (let i = firstGreenIndex; i <= endIndex; i++) {
+      totalIntensity += forecast[i].carbonIntensity
+    }
+    const avgIntensity = totalIntensity / (endIndex - firstGreenIndex + 1)
+
+    const startHour = new Date(forecast[firstGreenIndex].datetime).getHours()
+    const endHour = (new Date(forecast[endIndex].datetime).getHours() + 1) % 24
+
+    return {
+      startHour,
+      endHour,
+      avgIntensity: Math.round(avgIntensity),
+      level: 'low',
+    }
+  }
+
+  // No green hours - check if we have yellow hours
+  if (yellowIndices.length > 0) {
+    // Sort yellow hours by intensity to find the two lowest
+    const sortedYellow = yellowIndices
+      .map(i => ({ index: i, intensity: forecast[i].carbonIntensity }))
+      .sort((a, b) => a.intensity - b.intensity)
+      .slice(0, 2)
+
+    // If we have at least 2 yellow hours, try to find contiguous ones
+    if (sortedYellow.length >= 2) {
+      const indices = sortedYellow.map(y => y.index).sort((a, b) => a - b)
+
+      // Check if they're contiguous
+      if (indices[1] === indices[0] + 1) {
+        const startHour = new Date(forecast[indices[0]].datetime).getHours()
+        const endHour = (new Date(forecast[indices[1]].datetime).getHours() + 1) % 24
+        const avgIntensity = (sortedYellow[0].intensity + sortedYellow[1].intensity) / 2
+
+        return {
+          startHour,
+          endHour,
+          avgIntensity: Math.round(avgIntensity),
+          level: 'moderate_fallback',
+        }
+      }
+    }
+
+    // Just use the single lowest yellow hour
+    const lowestYellow = sortedYellow[0]
+    const hour = new Date(forecast[lowestYellow.index].datetime).getHours()
+
     return {
       startHour: hour,
       endHour: (hour + 1) % 24,
-      avgIntensity: Math.round(minIntensity),
+      avgIntensity: Math.round(lowestYellow.intensity),
+      level: 'moderate_fallback',
     }
   }
 
-  // Find contiguous ranges of green hours starting from the first (next closest)
-  const firstGreenIndex = greenIndices[0]
-  let endIndex = firstGreenIndex
-
-  // Extend to include contiguous green hours
-  for (let i = 1; i < greenIndices.length; i++) {
-    if (greenIndices[i] === greenIndices[i - 1] + 1) {
-      endIndex = greenIndices[i]
-    } else {
-      break // Stop at first gap
+  // All hours are red (>400) - find the lowest anyway but mark as high_all_day
+  let minIndex = 0
+  let minIntensity = Infinity
+  for (let i = 0; i < forecast.length; i++) {
+    if (forecast[i].carbonIntensity < minIntensity) {
+      minIntensity = forecast[i].carbonIntensity
+      minIndex = i
     }
   }
 
-  // Calculate average intensity for the green window
-  let totalIntensity = 0
-  for (let i = firstGreenIndex; i <= endIndex; i++) {
-    totalIntensity += forecast[i].carbonIntensity
-  }
-  const avgIntensity = totalIntensity / (endIndex - firstGreenIndex + 1)
-
-  const startHour = new Date(forecast[firstGreenIndex].datetime).getHours()
-  const endHour = (new Date(forecast[endIndex].datetime).getHours() + 1) % 24
-
+  const hour = new Date(forecast[minIndex].datetime).getHours()
   return {
-    startHour,
-    endHour,
-    avgIntensity: Math.round(avgIntensity),
+    startHour: hour,
+    endHour: (hour + 1) % 24,
+    avgIntensity: Math.round(minIntensity),
+    level: 'high_all_day',
   }
 }
 

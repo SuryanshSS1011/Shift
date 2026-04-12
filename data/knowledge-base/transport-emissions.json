@@ -1,0 +1,11 @@
+{
+  "car_average": { "kgCO2PerMile": 0.404 },
+  "rideshare_uber": { "kgCO2PerMile": 0.470 },
+  "bus_us_average": { "kgCO2PerMile": 0.177 },
+  "subway_nyc": { "kgCO2PerMile": 0.045 },
+  "train_amtrak": { "kgCO2PerMile": 0.089 },
+  "bicycle": { "kgCO2PerMile": 0.0 },
+  "walking": { "kgCO2PerMile": 0.0 },
+  "electric_car": { "kgCO2PerMile": 0.12 },
+  "motorcycle": { "kgCO2PerMile": 0.21 }
+}

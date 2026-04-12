@@ -1,0 +1,15 @@
+{
+  "beef": { "kgCO2PerKg": 27.0 },
+  "lamb": { "kgCO2PerKg": 39.2 },
+  "chicken": { "kgCO2PerKg": 6.9 },
+  "pork": { "kgCO2PerKg": 12.1 },
+  "fish": { "kgCO2PerKg": 5.4 },
+  "eggs": { "kgCO2PerKg": 4.8 },
+  "milk": { "kgCO2PerLiter": 1.3 },
+  "cheese": { "kgCO2PerKg": 13.5 },
+  "tofu": { "kgCO2PerKg": 2.0 },
+  "vegetables": { "kgCO2PerKg": 0.5 },
+  "fruits": { "kgCO2PerKg": 0.8 },
+  "rice": { "kgCO2PerKg": 2.7 },
+  "bread": { "kgCO2PerKg": 1.3 }
+}

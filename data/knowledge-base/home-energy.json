@@ -1,0 +1,9 @@
+{
+  "dryer_load": { "kgCO2PerUse": 0.69, "costPerUse": 0.30 },
+  "cold_wash_vs_hot": { "kgCO2Saved": 0.44, "costSaved": 0.10 },
+  "unplug_devices_daily": { "kgCO2Saved": 0.15, "costSaved": 0.03 },
+  "thermostat_2f_lower": { "kgCO2SavedDaily": 0.23, "costSavedDaily": 0.08 },
+  "led_vs_incandescent_hour": { "kgCO2Saved": 0.04, "costSaved": 0.01 },
+  "dishwasher_full_load": { "kgCO2PerLoad": 0.45 },
+  "microwave_vs_oven": { "kgCO2Saved": 0.12 }
+}

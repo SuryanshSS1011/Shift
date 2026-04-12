@@ -1,0 +1,62 @@
+{
+  "new_york": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 89
+  },
+  "san_francisco": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 80
+  },
+  "chicago": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 65
+  },
+  "boston": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 72
+  },
+  "philadelphia": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 67
+  },
+  "seattle": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": false,
+    "transitScore": 57
+  },
+  "washington_dc": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 69
+  },
+  "los_angeles": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 53
+  },
+  "miami": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": true,
+    "transitScore": 57
+  },
+  "atlanta": {
+    "hasSubway": true,
+    "hasBus": true,
+    "hasCommuter Rail": false,
+    "transitScore": 48
+  }
+}

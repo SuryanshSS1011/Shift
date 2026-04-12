@@ -1,0 +1,10 @@
+{
+  "plastic_bag": { "kgCO2PerUnit": 0.033 },
+  "reusable_bag": { "kgCO2PerUnit": 1.6, "usesBeforeBreakeven": 50 },
+  "paper_receipt": { "kgCO2PerUnit": 0.0017 },
+  "clothing_average_item": { "kgCO2PerUnit": 10.0 },
+  "secondhand_vs_new": { "kgCO2Saved": 8.5 },
+  "repair_vs_replace_electronics": { "kgCO2Saved": 50.0 },
+  "composting_food_waste_kg": { "kgCO2Saved": 0.25 },
+  "recycling_aluminum_can": { "kgCO2Saved": 0.14 }
+}

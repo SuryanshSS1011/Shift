@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { Card, Metric, Text, ProgressBar } from '@tremor/react'
 import { kgToEquivalencies } from '@/lib/emissions/equivalencies'
 
 interface ImpactDashboardProps {
@@ -20,57 +21,70 @@ export function ImpactDashboard({
     [totalCo2SavedKg]
   )
 
+  // Progress toward monthly goal (30 kg CO2)
+  const monthlyGoal = 30
+  const progressPercent = Math.min((totalCo2SavedKg / monthlyGoal) * 100, 100)
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#1a2e1a] rounded-2xl p-6 border border-green-800/30"
+      className="space-y-4"
     >
-      <h3 className="text-lg font-semibold text-green-50 mb-4">
+      <h3 className="text-lg font-semibold text-green-50">
         Your Total Impact
       </h3>
 
-      {/* Main Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-50">
-            {totalCo2SavedKg.toFixed(1)}
-          </div>
-          <div className="text-green-400 text-xs">kg CO₂</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-50">
-            ${totalDollarSaved.toFixed(0)}
-          </div>
-          <div className="text-green-400 text-xs">saved</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-50">
-            {totalActionsCompleted}
-          </div>
-          <div className="text-green-400 text-xs">actions</div>
-        </div>
+      {/* Main Stats - Tremor Cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
+          <Text className="!text-green-400">CO₂ Saved</Text>
+          <Metric className="!text-green-50">{totalCo2SavedKg.toFixed(1)}</Metric>
+          <Text className="!text-green-400/70">kg</Text>
+        </Card>
+        <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
+          <Text className="!text-green-400">Money Saved</Text>
+          <Metric className="!text-green-50">${totalDollarSaved.toFixed(0)}</Metric>
+          <Text className="!text-green-400/70">total</Text>
+        </Card>
+        <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
+          <Text className="!text-green-400">Actions</Text>
+          <Metric className="!text-green-50">{totalActionsCompleted}</Metric>
+          <Text className="!text-green-400/70">completed</Text>
+        </Card>
       </div>
+
+      {/* Monthly Progress */}
+      <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
+        <div className="flex justify-between items-center mb-2">
+          <Text className="!text-green-400">Monthly Goal Progress</Text>
+          <Text className="!text-green-50">{totalCo2SavedKg.toFixed(1)} / {monthlyGoal} kg</Text>
+        </div>
+        <ProgressBar value={progressPercent} color="green" className="!bg-[#0f1a0f]" />
+        <Text className="!text-green-400/70 mt-2 text-center">
+          {progressPercent >= 100 ? 'Goal achieved!' : `${(monthlyGoal - totalCo2SavedKg).toFixed(1)} kg to go`}
+        </Text>
+      </Card>
 
       {/* Equivalencies */}
       {totalCo2SavedKg > 0 && (
-        <div className="pt-4 border-t border-green-800/30">
-          <p className="text-green-400 text-sm mb-3">That&apos;s like...</p>
+        <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
+          <Text className="!text-green-400 mb-3">That&apos;s equivalent to...</Text>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#0f1a0f] rounded-lg p-3 text-center">
-              <div className="text-green-50 font-semibold">
+              <div className="text-green-50 font-semibold text-lg">
                 {equivalencies.milesNotDriven}
               </div>
               <div className="text-green-400 text-xs">miles not driven</div>
             </div>
             <div className="bg-[#0f1a0f] rounded-lg p-3 text-center">
-              <div className="text-green-50 font-semibold">
+              <div className="text-green-50 font-semibold text-lg">
                 {equivalencies.phoneCharges}
               </div>
               <div className="text-green-400 text-xs">phone charges</div>
             </div>
           </div>
-        </div>
+        </Card>
       )}
     </motion.div>
   )

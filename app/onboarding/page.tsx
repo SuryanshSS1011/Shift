@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell'
 import { QuestionCard } from '@/components/onboarding/QuestionCard'
@@ -93,6 +93,21 @@ export default function OnboardingPage() {
     }
     setSessionId(storedSessionId)
   }, [])
+
+  // Handle back navigation
+  const handleBack = useCallback(() => {
+    if (flowState === 'address') {
+      // Go back to last question
+      setCurrentStep(QUESTIONS.length - 1)
+      setFlowState('questions')
+    } else if (currentStep > 0) {
+      // Go to previous question
+      setCurrentStep(currentStep - 1)
+    }
+  }, [flowState, currentStep])
+
+  // Check if back is available
+  const canGoBack = flowState === 'questions' ? currentStep > 0 : flowState === 'address'
 
   const handleQuestionSelect = (value: string) => {
     const questionId = QUESTIONS[currentStep].id as keyof OnboardingAnswers
@@ -191,7 +206,7 @@ export default function OnboardingPage() {
   // Address capture (step 6)
   if (flowState === 'address') {
     return (
-      <OnboardingShell>
+      <OnboardingShell showBackButton onBack={handleBack}>
         <AnimatePresence mode="wait">
           <AddressCapture key="address" onSubmit={handleAddressSubmit} />
         </AnimatePresence>
@@ -201,7 +216,7 @@ export default function OnboardingPage() {
 
   // Questions (steps 1-5)
   return (
-    <OnboardingShell>
+    <OnboardingShell showBackButton={canGoBack} onBack={handleBack}>
       <AnimatePresence mode="wait">
         <QuestionCard
           key={currentStep}

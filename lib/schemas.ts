@@ -28,3 +28,25 @@ export const WeeklyReportOutputSchema = z.object({
 export type MicroActionOutput = z.infer<typeof MicroActionOutputSchema>
 export type UserProfileOutput = z.infer<typeof UserProfileOutputSchema>
 export type WeeklyReportOutput = z.infer<typeof WeeklyReportOutputSchema>
+
+// Grid Forecast Schemas
+export const ForecastDataPointSchema = z.object({
+  datetime: z.string(),
+  carbonIntensity: z.number(),
+})
+
+export const GridForecastOutputSchema = z.object({
+  zone: z.string(),
+  forecast: z.array(ForecastDataPointSchema),
+  bestTime: z.object({
+    label: z.string(),
+    startHour: z.number().int().min(0).max(23),
+    endHour: z.number().int().min(0).max(23),
+    intensity: z.number(),
+  }),
+  currentIntensity: z.number(),
+  currentLevel: z.enum(['low', 'moderate', 'high']),
+})
+
+export type ForecastDataPointOutput = z.infer<typeof ForecastDataPointSchema>
+export type GridForecastOutput = z.infer<typeof GridForecastOutputSchema>

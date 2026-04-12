@@ -7,7 +7,7 @@ import Link from 'next/link'
 const impactStats = [
   { value: '2.5kg', label: 'avg CO₂ saved per action' },
   { value: '90sec', label: 'to get started' },
-  { value: '190+', label: 'personalized actions' },
+  { value: '200+', label: 'personalized actions' },
 ]
 
 const features = [
@@ -89,12 +89,19 @@ export default function Home() {
                 Start in 90 Seconds
               </Link>
             )}
-            {hasSession && (
+            {hasSession ? (
               <Link
                 href="/onboarding"
                 className="inline-flex items-center justify-center px-8 py-4 border border-green-600 text-green-400 hover:bg-green-600/10 font-semibold rounded-xl transition-colors text-lg"
               >
                 Start Fresh
+              </Link>
+            ) : (
+              <Link
+                href="/dashboard?demo=true"
+                className="inline-flex items-center justify-center px-8 py-4 border border-green-600 text-green-400 hover:bg-green-600/10 font-semibold rounded-xl transition-colors text-lg"
+              >
+                Try Demo
               </Link>
             )}
           </motion.div>

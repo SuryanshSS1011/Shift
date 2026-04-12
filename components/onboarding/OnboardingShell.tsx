@@ -1,25 +1,57 @@
 'use client'
 
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 interface OnboardingShellProps {
   children: React.ReactNode
+  showBackButton?: boolean
+  onBack?: () => void
 }
 
-export function OnboardingShell({ children }: OnboardingShellProps) {
+export function OnboardingShell({ children, showBackButton, onBack }: OnboardingShellProps) {
   return (
     <div className="min-h-screen bg-[#0f1a0f] flex flex-col">
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="py-6 px-4 text-center"
+        className="py-4 px-4 border-b border-green-800/30"
       >
-        <div className="inline-flex items-center gap-2">
-          <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">S</span>
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          {/* Left - Back button */}
+          <div className="w-20">
+            {showBackButton && onBack && (
+              <button
+                onClick={onBack}
+                className="p-2 -ml-2 text-green-400 hover:text-green-300 transition-colors flex items-center gap-1"
+                aria-label="Go back"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="text-sm">Back</span>
+              </button>
+            )}
           </div>
-          <span className="text-xl font-bold text-green-50">Shift</span>
+
+          {/* Center - Logo */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center group-hover:bg-green-500 transition-colors">
+              <span className="text-white font-bold text-sm">S</span>
+            </div>
+            <span className="text-xl font-bold text-green-50">Shift</span>
+          </Link>
+
+          {/* Right - Exit link */}
+          <div className="w-20 text-right">
+            <Link
+              href="/"
+              className="text-sm text-green-400 hover:text-green-300 transition-colors"
+            >
+              Exit
+            </Link>
+          </div>
         </div>
       </motion.header>
 

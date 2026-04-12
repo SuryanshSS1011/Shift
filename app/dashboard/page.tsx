@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { Header } from '@/components/shared/Header'
 import { MicroActionCard, MicroActionCardSkeleton } from '@/components/dashboard/MicroActionCard'
 import { StreakDisplay } from '@/components/dashboard/StreakDisplay'
 import { ImpactDashboard } from '@/components/dashboard/ImpactDashboard'
@@ -80,13 +81,12 @@ function DashboardContent() {
         date.setDate(date.getDate() - i)
         demoDates.push(date.toISOString().split('T')[0])
       }
-      // Add some random older dates
-      for (let i = 15; i < 25; i++) {
-        if (Math.random() > 0.5) {
-          const date = new Date(today)
-          date.setDate(date.getDate() - i)
-          demoDates.push(date.toISOString().split('T')[0])
-        }
+      // Add deterministic older dates for heatmap variety
+      const olderDateOffsets = [15, 17, 19, 21, 24]
+      for (const offset of olderDateOffsets) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - offset)
+        demoDates.push(date.toISOString().split('T')[0])
       }
       setData((prev) => ({
         ...prev,
@@ -188,6 +188,18 @@ function DashboardContent() {
 
     setIsCompleting(true)
 
+    // In demo mode, skip the API call and update state locally
+    if (demoMode.isDemoMode) {
+      setData((prev) => ({
+        ...prev,
+        action: prev.action ? { ...prev.action, completed: true } : null,
+        // Keep demo totals unchanged - don't increment
+      }))
+      setShowCelebration(true)
+      setIsCompleting(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/complete-action', {
         method: 'POST',
@@ -228,29 +240,13 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-[#0f1a0f]">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="px-4 py-6 border-b border-green-800/30"
-      >
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
-              <span className="text-xl font-bold text-green-50">Shift</span>
-              {demoMode.isDemoMode && (
-                <span className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full">
-                  Demo
-                </span>
-              )}
-            </div>
-            <div className="text-green-400 text-sm">{today}</div>
-          </div>
-        </div>
-      </motion.header>
+      {/* Header with Menu */}
+      <Header showMenu isDemoMode={demoMode.isDemoMode} />
+
+      {/* Date display */}
+      <div className="px-4 py-3 max-w-lg mx-auto">
+        <div className="text-green-400 text-sm text-right">{today}</div>
+      </div>
 
       {/* Main content */}
       <main className="px-4 py-6 max-w-lg mx-auto space-y-6">

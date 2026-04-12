@@ -278,7 +278,8 @@ function OnboardingContent() {
     // For retake: create new session (old profile stays in DB but is orphaned)
     // For new user: create new session
     const newSessionId = crypto.randomUUID()
-    localStorage.setItem('shift_session_id', newSessionId)
+    // Don't set localStorage here - wait until API succeeds to avoid race condition
+    // where user navigates to dashboard before profile is saved to database
     setSessionId(newSessionId)
 
     const completeAnswers: OnboardingAnswers = {
@@ -313,34 +314,29 @@ function OnboardingContent() {
       const data = await response.json()
 
       if (data.success) {
+        // Only save sessionId to localStorage AFTER profile is successfully saved to database
+        // This prevents the dashboard from redirecting back when user doesn't exist in DB
+        localStorage.setItem('shift_session_id', newSessionId)
         setProfile({
           topImpactAreas: data.data.topImpactAreas,
           estimatedAnnualFootprintKg: data.data.estimatedAnnualFootprintKg,
           aiProfileSummary: data.data.aiProfileSummary,
           actionFrequency: completeAnswers.actionFrequency,
         })
+        setFlowState('profile')
       } else {
-        // Fallback profile on error
-        setProfile({
-          topImpactAreas: ['food', 'transport', 'energy'],
-          estimatedAnnualFootprintKg: 15000,
-          aiProfileSummary:
-            "You're ready to start your sustainability journey. Let's focus on the changes that matter most to you.",
-          actionFrequency: completeAnswers.actionFrequency,
-        })
+        // API returned error - profile not saved to database
+        // Don't set localStorage - can't proceed to dashboard
+        console.error('Profile generation API error:', data.error)
+        setFlowState('lifestyle')
+        // TODO: Show error toast to user
       }
     } catch (error) {
       console.error('Profile generation error:', error)
-      // Fallback profile
-      setProfile({
-        topImpactAreas: ['food', 'transport', 'energy'],
-        estimatedAnnualFootprintKg: 15000,
-        aiProfileSummary:
-          "You're ready to start your sustainability journey. Let's focus on the changes that matter most to you.",
-        actionFrequency: answers.actionFrequency as number,
-      })
-    } finally {
-      setFlowState('profile')
+      // Network/fetch error - profile not saved to database
+      // Don't set localStorage - can't proceed to dashboard
+      setFlowState('lifestyle')
+      // TODO: Show error toast to user
     }
   }
 

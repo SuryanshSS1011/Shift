@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -80,7 +80,7 @@ function DashboardContent() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isRedirecting, setIsRedirecting] = useState(false)
+  const hasCheckedSession = useRef(false)
   const [data, setData] = useState<DashboardData>({
     action: null,
     streak: { current: 0, longest: 0 },
@@ -104,8 +104,9 @@ function DashboardContent() {
 
   // Get session ID (demo mode uses hardcoded)
   useEffect(() => {
-    // Skip if already redirecting or sessionId already set
-    if (isRedirecting || sessionId) return
+    // Only check session once per mount
+    if (hasCheckedSession.current) return
+    hasCheckedSession.current = true
 
     if (demoMode.isDemoMode) {
       setSessionId(demoMode.sessionId)
@@ -184,12 +185,11 @@ function DashboardContent() {
     // Check session
     const storedSessionId = localStorage.getItem('shift_session_id')
     if (!storedSessionId) {
-      setIsRedirecting(true)
       router.replace('/onboarding')
       return
     }
     setSessionId(storedSessionId)
-  }, [demoMode.isDemoMode, sessionId, isRedirecting, router])
+  }, [demoMode.isDemoMode, router])
 
   // Fetch today's action
   const fetchAction = useCallback(async () => {

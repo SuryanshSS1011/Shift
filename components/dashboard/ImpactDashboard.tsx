@@ -4,21 +4,42 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Card, Metric, Text } from '@tremor/react'
 import { kgToEquivalencies } from '@/lib/emissions/equivalencies'
+import { computeLevel, getLevelProgress } from '@/lib/points'
+import type { LevelName } from '@/lib/points'
 
 interface ImpactDashboardProps {
   totalCo2SavedKg: number
   totalDollarSaved: number
   totalActionsCompleted: number
+  totalPoints?: number
+  level?: LevelName
+  levelEmoji?: string
 }
 
 export function ImpactDashboard({
   totalCo2SavedKg,
   totalDollarSaved,
   totalActionsCompleted,
+  totalPoints = 0,
+  level: propLevel,
+  levelEmoji: propLevelEmoji,
 }: ImpactDashboardProps) {
   const equivalencies = useMemo(
     () => kgToEquivalencies(totalCo2SavedKg),
     [totalCo2SavedKg]
+  )
+
+  // Compute level from points if not provided
+  const levelInfo = useMemo(() => {
+    if (propLevel && propLevelEmoji) {
+      return { level: propLevel, emoji: propLevelEmoji, nextLevelAt: 0, minPoints: 0 }
+    }
+    return computeLevel(totalPoints)
+  }, [totalPoints, propLevel, propLevelEmoji])
+
+  const levelProgress = useMemo(
+    () => getLevelProgress(totalPoints),
+    [totalPoints]
   )
 
   // Progress toward monthly goal (30 kg CO2)
@@ -36,7 +57,7 @@ export function ImpactDashboard({
       </h3>
 
       {/* Main Stats - Tremor Cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
           <Text className="!text-green-400">CO₂ Saved</Text>
           <Metric className="!text-green-50">{totalCo2SavedKg.toFixed(1)}</Metric>
@@ -46,6 +67,11 @@ export function ImpactDashboard({
           <Text className="!text-green-400">Money Saved</Text>
           <Metric className="!text-green-50">${totalDollarSaved.toFixed(0)}</Metric>
           <Text className="!text-green-400/70">total</Text>
+        </Card>
+        <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
+          <Text className="!text-green-400">Points</Text>
+          <Metric className="!text-green-50">{totalPoints.toLocaleString()}</Metric>
+          <Text className="!text-green-400/70">{levelInfo.emoji} {levelInfo.level}</Text>
         </Card>
         <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
           <Text className="!text-green-400">Actions</Text>

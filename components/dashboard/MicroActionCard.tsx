@@ -1,6 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { SDGBadgeGroup } from '@/components/shared/SDGBadge'
+import { calculateCarbonROI, formatCarbonCost } from '@/lib/carbon-estimation'
 
 interface MicroActionCardProps {
   action: {
@@ -14,6 +16,9 @@ interface MicroActionCardProps {
     timeRequiredMinutes: number
     difficultyLevel: string
     equivalencyLabel: string
+    sdgTags?: number[]
+    points?: number
+    aiCostCo2Grams?: number
     completed: boolean
   }
   onComplete: () => void
@@ -114,19 +119,33 @@ export function MicroActionCard({ action, onComplete, isCompleting }: MicroActio
     )
   }
 
+  // Calculate AI carbon ROI if we have the data
+  const aiCostDisplay = action.aiCostCo2Grams && action.aiCostCo2Grams > 0
+    ? calculateCarbonROI(action.co2SavingsKg, action.aiCostCo2Grams)
+    : null
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#1a2e1a] rounded-2xl overflow-hidden border border-green-800/30"
+      className="bg-[#1a2e1a] rounded-2xl overflow-hidden border border-green-800/30 relative"
     >
+      {/* Points Badge - Top Right */}
+      {action.points && action.points > 0 && (
+        <div className="absolute top-3 right-3 z-10">
+          <span className="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+            +{action.points} pts
+          </span>
+        </div>
+      )}
+
       {/* Category Badge */}
       <div className={`px-6 py-3 ${config.bgColor} flex items-center gap-2`}>
         <span className={`text-xl font-bold ${config.color}`}>{config.label}</span>
         <span className={`text-sm font-medium ${config.color} capitalize`}>
           {action.category}
         </span>
-        <span className="ml-auto text-green-400 text-sm">
+        <span className="ml-auto text-green-400 text-sm mr-16">
           {action.timeRequiredMinutes === 0 ? 'Quick win' : `${action.timeRequiredMinutes} min`}
         </span>
       </div>
@@ -164,9 +183,24 @@ export function MicroActionCard({ action, onComplete, isCompleting }: MicroActio
         </div>
 
         {/* Equivalency */}
-        <p className="text-center text-green-400 text-sm mb-6">
+        <p className="text-center text-green-400 text-sm mb-4">
           {action.equivalencyLabel}
         </p>
+
+        {/* SDG Badges */}
+        {action.sdgTags && action.sdgTags.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="text-green-400/70 text-xs">Contributing to:</span>
+            <SDGBadgeGroup sdgIds={action.sdgTags} size="sm" maxDisplay={3} />
+          </div>
+        )}
+
+        {/* AI Cost Transparency Line */}
+        {aiCostDisplay && action.aiCostCo2Grams && (
+          <p className="text-center text-green-400/50 text-xs mb-4">
+            ⚡ This recommendation used {formatCarbonCost(action.aiCostCo2Grams)} of AI · You&apos;re saving {aiCostDisplay.displayText} that
+          </p>
+        )}
 
         {/* Complete Button */}
         <button

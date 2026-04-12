@@ -112,16 +112,44 @@ export interface BestWindowResult {
   endHour: number
   avgIntensity: number
   level: BestTimeLevel
+  nextBest?: {
+    startHour: number
+    endHour: number
+  }
 }
 
 /**
- * Find the best time window for energy use by identifying the lowest intensity hours.
+ * Helper: Group indices into contiguous ranges
+ * e.g., [0,1,2,5,6,8] -> [[0,1,2], [5,6], [8]]
+ */
+function groupIntoContiguousRanges(indices: number[]): number[][] {
+  if (indices.length === 0) return []
+
+  const sorted = [...indices].sort((a, b) => a - b)
+  const ranges: number[][] = []
+  let currentRange = [sorted[0]]
+
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === sorted[i - 1] + 1) {
+      currentRange.push(sorted[i])
+    } else {
+      ranges.push(currentRange)
+      currentRange = [sorted[i]]
+    }
+  }
+  ranges.push(currentRange)
+
+  return ranges
+}
+
+/**
+ * Find the best time window for energy use.
  *
  * Algorithm:
- * 1. Sort all hours by carbon intensity (lowest first)
- * 2. Take the lowest intensity hour as the anchor
- * 3. Extend to adjacent hours if they're also among the lowest
- * 4. Determine level based on the intensity of the best window
+ * 1. Collect ALL hours with intensity < 200 (green hours)
+ * 2. If green hours exist: group into contiguous ranges, return first + next best
+ * 3. If no green: use dynamic threshold based on data spread
+ * 4. If all hours > 400: return high_all_day warning
  */
 export function findNextGreenWindow(
   forecast: ForecastDataPoint[]
@@ -133,61 +161,104 @@ export function findNextGreenWindow(
   const GREEN_THRESHOLD = 200
   const RED_THRESHOLD = 400
 
-  // Create array of {index, hour, intensity} sorted by intensity
-  const sortedHours = forecast
-    .map((point, index) => ({
-      index,
-      hour: new Date(point.datetime).getHours(),
-      intensity: point.carbonIntensity,
-    }))
-    .sort((a, b) => a.intensity - b.intensity)
-
-  // Start with the lowest intensity hour
-  const lowestHour = sortedHours[0]
-
-  // Find contiguous hours around the lowest that are also low
-  // We'll include adjacent hours if they're in the top 25% lowest
-  const topQuartileThreshold = sortedHours[Math.floor(sortedHours.length * 0.25)]?.intensity || lowestHour.intensity
-
-  // Get indices of hours that are in the low range
-  const lowIndices = new Set(
-    sortedHours
-      .filter(h => h.intensity <= Math.max(topQuartileThreshold, lowestHour.intensity + 50))
-      .map(h => h.index)
-  )
-
-  // Starting from the lowest hour's index, extend in both directions
-  let startIndex = lowestHour.index
-  let endIndex = lowestHour.index
-
-  // Extend backwards
-  while (startIndex > 0 && lowIndices.has(startIndex - 1)) {
-    startIndex--
+  // Collect ALL green hours (< 200)
+  const greenIndices: number[] = []
+  for (let i = 0; i < forecast.length; i++) {
+    if (forecast[i].carbonIntensity < GREEN_THRESHOLD) {
+      greenIndices.push(i)
+    }
   }
 
-  // Extend forwards
-  while (endIndex < forecast.length - 1 && lowIndices.has(endIndex + 1)) {
-    endIndex++
+  // If we have green hours, group them into contiguous ranges
+  if (greenIndices.length > 0) {
+    const greenRanges = groupIntoContiguousRanges(greenIndices)
+
+    // First (earliest) contiguous green range
+    const firstRange = greenRanges[0]
+    const startIndex = firstRange[0]
+    const endIndex = firstRange[firstRange.length - 1]
+
+    // Calculate average intensity for the first range
+    let totalIntensity = 0
+    for (let i = startIndex; i <= endIndex; i++) {
+      totalIntensity += forecast[i].carbonIntensity
+    }
+    const avgIntensity = totalIntensity / (endIndex - startIndex + 1)
+
+    const startHour = new Date(forecast[startIndex].datetime).getHours()
+    const endHour = (new Date(forecast[endIndex].datetime).getHours() + 1) % 24
+
+    // Check for next best contiguous green range
+    let nextBest: { startHour: number; endHour: number } | undefined
+    if (greenRanges.length > 1) {
+      const secondRange = greenRanges[1]
+      const nextStartIndex = secondRange[0]
+      const nextEndIndex = secondRange[secondRange.length - 1]
+      nextBest = {
+        startHour: new Date(forecast[nextStartIndex].datetime).getHours(),
+        endHour: (new Date(forecast[nextEndIndex].datetime).getHours() + 1) % 24,
+      }
+    }
+
+    return {
+      startHour,
+      endHour,
+      avgIntensity: Math.round(avgIntensity),
+      level: 'low',
+      nextBest,
+    }
   }
 
-  // Calculate average intensity for the window
+  // No green hours - calculate dynamic threshold for yellow fallback
+  const intensities = forecast.map(p => p.carbonIntensity)
+  const minIntensity = Math.min(...intensities)
+  const maxIntensity = Math.max(...intensities)
+
+  // Check if all hours are red (> 400)
+  if (minIntensity >= RED_THRESHOLD) {
+    return {
+      startHour: 0,
+      endHour: 0,
+      avgIntensity: Math.round(minIntensity),
+      level: 'high_all_day',
+    }
+  }
+
+  // Dynamic threshold: bottom 25% of the spread, capped at 350
+  const spread = maxIntensity - minIntensity
+  const dynamicThreshold = Math.min(minIntensity + (spread * 0.25), 350)
+
+  // Collect all hours below the dynamic threshold
+  const lowIndices: number[] = []
+  for (let i = 0; i < forecast.length; i++) {
+    if (forecast[i].carbonIntensity <= dynamicThreshold) {
+      lowIndices.push(i)
+    }
+  }
+
+  // If no hours below threshold (shouldn't happen), use just the minimum
+  if (lowIndices.length === 0) {
+    const minIndex = intensities.indexOf(minIntensity)
+    const hour = new Date(forecast[minIndex].datetime).getHours()
+    return {
+      startHour: hour,
+      endHour: (hour + 1) % 24,
+      avgIntensity: Math.round(minIntensity),
+      level: 'moderate_fallback',
+    }
+  }
+
+  // Group into contiguous ranges and return the first
+  const lowRanges = groupIntoContiguousRanges(lowIndices)
+  const firstRange = lowRanges[0]
+  const startIndex = firstRange[0]
+  const endIndex = firstRange[firstRange.length - 1]
+
   let totalIntensity = 0
   for (let i = startIndex; i <= endIndex; i++) {
     totalIntensity += forecast[i].carbonIntensity
   }
   const avgIntensity = totalIntensity / (endIndex - startIndex + 1)
-
-  // Determine level based on the average intensity
-  let level: BestTimeLevel
-  if (avgIntensity < GREEN_THRESHOLD) {
-    level = 'low'
-  } else if (avgIntensity < RED_THRESHOLD) {
-    // Check if ANY hour in the forecast is green
-    const hasAnyGreen = forecast.some(p => p.carbonIntensity < GREEN_THRESHOLD)
-    level = hasAnyGreen ? 'low' : 'moderate_fallback'
-  } else {
-    level = 'high_all_day'
-  }
 
   const startHour = new Date(forecast[startIndex].datetime).getHours()
   const endHour = (new Date(forecast[endIndex].datetime).getHours() + 1) % 24
@@ -196,7 +267,7 @@ export function findNextGreenWindow(
     startHour,
     endHour,
     avgIntensity: Math.round(avgIntensity),
-    level,
+    level: 'moderate_fallback',
   }
 }
 

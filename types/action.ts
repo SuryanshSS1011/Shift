@@ -13,6 +13,7 @@ export interface ActionCandidate {
   difficulty: DifficultyLevel
   behavioralFramePrimary: BehavioralFrame
   equivalencyLabel: string
+  sdgTags: number[] // UN SDG IDs (e.g., [13, 7] for energy actions)
   applicableDietPatterns: string[]
   applicableLivingSituations: string[]
   applicableCommuteTypes: string[]
@@ -33,6 +34,9 @@ export interface MicroAction {
   difficultyLevel: DifficultyLevel
   behavioralFrame: BehavioralFrame
   equivalencyLabel: string
+  sdgTags: number[] // UN SDG IDs from the action candidate
+  points: number // Computed at generation time
+  aiCostCo2Grams: number // Carbon cost of the inference that generated this
   completed: boolean
   completedAt: string | null
   createdAt: string

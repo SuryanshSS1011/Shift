@@ -45,11 +45,18 @@ export function GridForecastWidget({
   const renderBestTimeAlert = () => {
     if (bestTimeLevel === 'low') {
       return (
-        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-          <Zap className="w-4 h-4 text-green-400" />
-          <span className="text-green-300 text-sm">
-            Best time: <span className="font-medium text-green-50">{forecast.bestTime.label}</span>
-          </span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+            <Zap className="w-4 h-4 text-green-400" />
+            <span className="text-green-300 text-sm">
+              Best time: <span className="font-medium text-green-50">{forecast.bestTime.label}</span>
+            </span>
+          </div>
+          {forecast.bestTime.nextBest && (
+            <div className="flex items-center gap-2 px-2 text-green-400/70 text-xs">
+              <span>Next best: {forecast.bestTime.nextBest.label}</span>
+            </div>
+          )}
         </div>
       )
     }

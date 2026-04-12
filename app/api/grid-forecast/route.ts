@@ -87,6 +87,13 @@ export async function POST(request: NextRequest) {
         endHour: forecastData.bestWindow.endHour,
         intensity: forecastData.bestWindow.avgIntensity,
         level: forecastData.bestWindow.level || 'low',
+        ...(forecastData.bestWindow.nextBest && {
+          nextBest: {
+            label: formatHourRange(forecastData.bestWindow.nextBest.startHour, forecastData.bestWindow.nextBest.endHour),
+            startHour: forecastData.bestWindow.nextBest.startHour,
+            endHour: forecastData.bestWindow.nextBest.endHour,
+          },
+        }),
       },
       currentIntensity,
       currentLevel: getIntensityLevel(currentIntensity),

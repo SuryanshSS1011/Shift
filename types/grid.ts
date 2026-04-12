@@ -14,6 +14,10 @@ export interface GridForecast {
     endHour: number
     avgIntensity: number
     level: BestTimeLevel
+    nextBest?: {
+      startHour: number
+      endHour: number
+    }
   }
   worstWindow: {
     startHour: number
@@ -33,6 +37,11 @@ export interface GridForecastResponse {
     endHour: number
     intensity: number
     level: BestTimeLevel
+    nextBest?: {
+      label: string
+      startHour: number
+      endHour: number
+    }
   }
   currentIntensity: number
   currentLevel: IntensityLevel

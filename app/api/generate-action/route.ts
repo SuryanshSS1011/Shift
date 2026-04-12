@@ -2,14 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z, ZodError } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { generateWithFallback } from '@/lib/ai'
-import { MicroActionOutputSchema } from '@/lib/schemas'
+import { MicroActionOutputSchema, type MicroActionOutput } from '@/lib/schemas'
 import { buildActionPrompt } from '@/lib/prompts/action-generator'
 import { SUSTAINABILITY_COACH_SYSTEM_PROMPT } from '@/lib/prompts/system-prompt'
 import { searchActions, getFallbackAction, getActionById } from '@/lib/knowledge-base'
 import { getWeather } from '@/lib/open-meteo'
 import { getGridIntensity } from '@/lib/electricity-maps'
+import { computePoints } from '@/lib/points'
+import { estimateCarbon } from '@/lib/carbon-estimation'
 import type { UserProfile } from '@/types/user'
 import type { ActionCategory } from '@/types/action'
+
+// Default SDG tags by category (used when action-library entry doesn't have sdgTags)
+function getDefaultSDGsForCategory(category: string): number[] {
+  const defaults: Record<string, number[]> = {
+    food: [13, 2, 12], // Climate Action, Zero Hunger, Responsible Consumption
+    transport: [13, 11], // Climate Action, Sustainable Cities
+    energy: [13, 7], // Climate Action, Clean Energy
+    shopping: [13, 12], // Climate Action, Responsible Consumption
+    water: [13, 6], // Climate Action, Clean Water
+    waste: [13, 12, 15], // Climate Action, Responsible Consumption, Life on Land
+  }
+  return defaults[category] || [13] // Always include Climate Action
+}
 
 // Input validation schema
 const InputSchema = z.object({
@@ -37,15 +52,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0]
+    // Get user's action frequency preference (hours between actions, 1-24)
+    const frequencyHours = typeof user.action_frequency === 'number' ? user.action_frequency : 24
 
-    // Check if action already exists for today (idempotency)
+    // Calculate the cutoff time based on frequency
+    const now = new Date()
+    const cutoffTime = new Date(now.getTime() - frequencyHours * 60 * 60 * 1000)
+
+    // Check if action already exists within the frequency window (idempotency)
     const { data: existingAction } = await supabase
       .from('actions')
       .select('*')
       .eq('user_id', user.id)
-      .eq('action_date', today)
+      .gte('created_at', cutoffTime.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (existingAction) {
@@ -63,12 +84,19 @@ export async function POST(request: NextRequest) {
           difficultyLevel: existingAction.difficulty_level,
           behavioralFrame: existingAction.behavioral_frame,
           equivalencyLabel: existingAction.equivalency_label,
+          sdgTags: existingAction.sdg_tags || [],
+          points: existingAction.points || 0,
+          aiCostCo2Grams: existingAction.ai_cost_co2_grams || 0,
           completed: existingAction.completed,
           actionDate: existingAction.action_date,
         },
         isExisting: true,
+        frequencyHours,
       })
     }
+
+    // Get today's date for action_date field
+    const today = new Date().toISOString().split('T')[0]
 
     // Get user's streak
     const { data: streakData } = await supabase
@@ -178,7 +206,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate personalized action with AI
-    let actionOutput
+    let actionOutput: MicroActionOutput
+    let aiCostCo2Grams = 0
+    let usedCandidate = candidates[0] // Track which candidate was used for SDG tags
+
     try {
       const basePrompt = buildActionPrompt(profile, candidates, currentStreak, weatherData)
       const fullPrompt = basePrompt + enhancedPromptContext
@@ -191,12 +222,27 @@ export async function POST(request: NextRequest) {
         },
         0.6
       )
+
+      // Estimate carbon cost of AI generation
+      // Approximate output tokens based on response size (rough estimate: 4 chars per token)
+      const estimatedOutputTokens = Math.ceil(
+        (actionOutput.title.length + actionOutput.description.length + actionOutput.anchorHabit.length) / 4
+      )
+      const carbonEstimate = estimateCarbon('llama-3.3-70b-versatile', estimatedOutputTokens, 500)
+      aiCostCo2Grams = carbonEstimate.co2Grams
+
+      // Find the candidate that matches the generated category for SDG tags
+      const matchingCandidate = candidates.find(c => c.category === actionOutput.category)
+      if (matchingCandidate) {
+        usedCandidate = matchingCandidate
+      }
     } catch (aiError) {
       console.error('[generate-action] AI generation failed:', aiError)
 
       // Try static fallback from knowledge base
       const staticFallback = getActionById(candidates[0]?.id || 'food-001')
       if (staticFallback) {
+        usedCandidate = staticFallback
         actionOutput = {
           title: staticFallback.title,
           description: staticFallback.descriptionTemplate
@@ -215,6 +261,7 @@ export async function POST(request: NextRequest) {
       } else {
         // Last resort fallback
         const fallbackCandidate = candidates[0]
+        usedCandidate = fallbackCandidate
         actionOutput = {
           title: fallbackCandidate.title,
           description: fallbackCandidate.descriptionTemplate
@@ -233,6 +280,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Compute points for this action
+    const points = computePoints(
+      actionOutput.co2SavingsKg,
+      actionOutput.dollarSavings,
+      actionOutput.difficultyLevel,
+      frequencyHours
+    )
+
+    // Get SDG tags from the candidate (fallback to category defaults)
+    const sdgTags = usedCandidate?.sdgTags || getDefaultSDGsForCategory(actionOutput.category)
+
     // Save action to database
     const { data: newAction, error: insertError } = await supabase
       .from('actions')
@@ -249,6 +307,9 @@ export async function POST(request: NextRequest) {
         difficulty_level: actionOutput.difficultyLevel,
         behavioral_frame: actionOutput.behavioralFrame,
         equivalency_label: actionOutput.equivalencyLabel,
+        sdg_tags: sdgTags,
+        points: points,
+        ai_cost_co2_grams: aiCostCo2Grams,
         completed: false,
       })
       .select()
@@ -276,10 +337,14 @@ export async function POST(request: NextRequest) {
         difficultyLevel: newAction.difficulty_level,
         behavioralFrame: newAction.behavioral_frame,
         equivalencyLabel: newAction.equivalency_label,
+        sdgTags: newAction.sdg_tags || [],
+        points: newAction.points || 0,
+        aiCostCo2Grams: newAction.ai_cost_co2_grams || 0,
         completed: newAction.completed,
         actionDate: newAction.action_date,
       },
       isExisting: false,
+      frequencyHours,
       context: {
         weather: weatherData,
         gridRenewablePercent: gridData?.renewablePercent,

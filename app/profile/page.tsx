@@ -226,7 +226,7 @@ export default function ProfilePage() {
             </span>
             <span className="text-green-400 text-sm mb-1">CO₂/year</span>
           </div>
-          <p className="text-green-400/70 text-xs mt-2">US average: ~16,000 kg/year</p>
+          <p className="text-green-400/70 text-xs mt-2">US average: ~16 tonnes/year</p>
         </motion.div>
 
         {/* Top Impact Areas */}

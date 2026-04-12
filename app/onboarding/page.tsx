@@ -7,6 +7,7 @@ import { OnboardingShell } from '@/components/onboarding/OnboardingShell'
 import { QuestionCard } from '@/components/onboarding/QuestionCard'
 import { MultiSelectCard } from '@/components/onboarding/MultiSelectCard'
 import { GoalDurationCard } from '@/components/onboarding/GoalDurationCard'
+import { ActionFrequencyCard } from '@/components/onboarding/ActionFrequencyCard'
 import { AddressCapture } from '@/components/onboarding/AddressCapture'
 import { LoadingScreen } from '@/components/onboarding/LoadingScreen'
 import { ProfileReveal } from '@/components/onboarding/ProfileReveal'
@@ -73,18 +74,8 @@ const LIFESTYLE_QUESTIONS = [
   },
 ]
 
-// Goal-setting questions (steps 7-8)
+// Goal-setting questions (steps 8-9, after frequency slider)
 const GOAL_QUESTIONS = [
-  {
-    id: 'actionFrequency',
-    question: 'How often do you want actions?',
-    subtitle: 'We\'ll send you personalized micro-actions',
-    options: [
-      { value: 'daily', label: 'Every day', emoji: '📅', description: 'Maximum impact' },
-      { value: 'every_other_day', label: 'Every other day', emoji: '📆', description: 'Balanced pace' },
-      { value: 'twice_weekly', label: 'Twice a week', emoji: '🗓️', description: 'Easy start' },
-    ],
-  },
   {
     id: 'preferredTime',
     question: 'When should we remind you?',
@@ -121,20 +112,22 @@ type ProfileResponse = {
   topImpactAreas: string[]
   estimatedAnnualFootprintKg: number
   aiProfileSummary: string
+  actionFrequency?: number // Hours between actions (1-24)
 }
 
 // Flow states for different sections
 type FlowState =
   | 'checking'
-  | 'lifestyle'      // Questions 1-5
-  | 'goal_duration'  // Question 6 - special component
-  | 'goals'          // Questions 7-9
-  | 'focus_areas'    // Question 10 - multi-select
-  | 'address'        // Question 11
+  | 'lifestyle'         // Questions 1-5
+  | 'goal_duration'     // Question 6 - special component
+  | 'action_frequency'  // Question 7 - frequency slider
+  | 'goals'             // Questions 8-9
+  | 'focus_areas'       // Question 10 - multi-select
+  | 'address'           // Question 11
   | 'loading'
   | 'profile'
 
-// Total steps: 5 lifestyle + 1 goal duration + 3 goal questions + 1 focus areas + 1 address = 11
+// Total steps: 5 lifestyle + 1 goal duration + 1 frequency + 2 goal questions + 1 focus areas + 1 address = 11
 const TOTAL_STEPS = 11
 
 function OnboardingContent() {
@@ -177,8 +170,10 @@ function OnboardingContent() {
         return currentStep + 1 // Steps 1-5
       case 'goal_duration':
         return 6
+      case 'action_frequency':
+        return 7
       case 'goals':
-        return 7 + currentStep // Steps 7-9
+        return 8 + currentStep // Steps 8-9
       case 'focus_areas':
         return 10
       case 'address':
@@ -200,11 +195,14 @@ function OnboardingContent() {
         setCurrentStep(LIFESTYLE_QUESTIONS.length - 1)
         setFlowState('lifestyle')
         break
+      case 'action_frequency':
+        setFlowState('goal_duration')
+        break
       case 'goals':
         if (currentStep > 0) {
           setCurrentStep(currentStep - 1)
         } else {
-          setFlowState('goal_duration')
+          setFlowState('action_frequency')
         }
         break
       case 'focus_areas':
@@ -220,7 +218,7 @@ function OnboardingContent() {
   // Check if back is available
   const canGoBack =
     flowState === 'lifestyle' ? currentStep > 0 :
-    ['goal_duration', 'goals', 'focus_areas', 'address'].includes(flowState)
+    ['goal_duration', 'action_frequency', 'goals', 'focus_areas', 'address'].includes(flowState)
 
   // Handle lifestyle question selection (steps 1-5)
   const handleLifestyleSelect = (value: string) => {
@@ -239,6 +237,12 @@ function OnboardingContent() {
   // Handle goal duration selection (step 6)
   const handleGoalDurationSelect = (duration: GoalDuration) => {
     setAnswers({ ...answers, goalDuration: duration })
+    setFlowState('action_frequency')
+  }
+
+  // Handle action frequency selection (step 7)
+  const handleActionFrequencySelect = (hours: number) => {
+    setAnswers({ ...answers, actionFrequency: hours })
     setCurrentStep(0) // Reset for goals section
     setFlowState('goals')
   }
@@ -313,6 +317,7 @@ function OnboardingContent() {
           topImpactAreas: data.data.topImpactAreas,
           estimatedAnnualFootprintKg: data.data.estimatedAnnualFootprintKg,
           aiProfileSummary: data.data.aiProfileSummary,
+          actionFrequency: completeAnswers.actionFrequency,
         })
       } else {
         // Fallback profile on error
@@ -321,6 +326,7 @@ function OnboardingContent() {
           estimatedAnnualFootprintKg: 15000,
           aiProfileSummary:
             "You're ready to start your sustainability journey. Let's focus on the changes that matter most to you.",
+          actionFrequency: completeAnswers.actionFrequency,
         })
       }
     } catch (error) {
@@ -331,6 +337,7 @@ function OnboardingContent() {
         estimatedAnnualFootprintKg: 15000,
         aiProfileSummary:
           "You're ready to start your sustainability journey. Let's focus on the changes that matter most to you.",
+        actionFrequency: answers.actionFrequency as number,
       })
     } finally {
       setFlowState('profile')
@@ -428,6 +435,22 @@ function OnboardingContent() {
           <GoalDurationCard
             key="goal_duration"
             onSubmit={handleGoalDurationSelect}
+            currentStep={displayStep}
+            totalSteps={TOTAL_STEPS}
+          />
+        </AnimatePresence>
+      </OnboardingShell>
+    )
+  }
+
+  // Action frequency (step 7)
+  if (flowState === 'action_frequency') {
+    return (
+      <OnboardingShell showBackButton onBack={handleBack}>
+        <AnimatePresence mode="wait">
+          <ActionFrequencyCard
+            key="action_frequency"
+            onSubmit={handleActionFrequencySelect}
             currentStep={displayStep}
             totalSteps={TOTAL_STEPS}
           />

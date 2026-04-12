@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>Shift</title>
+  <rect width="32" height="32" rx="7" fill="#16a34a"/>
+  <g transform="translate(16,16) scale(3.55) translate(-25,-28)">
+    <path d="M 38 6 C 52 8,52 46,12 50 C -2 46,12 4,38 6 Z" fill="white"/>
+  </g>
+</svg>

@@ -9,7 +9,16 @@ interface ProfileRevealProps {
     topImpactAreas: string[]
     estimatedAnnualFootprintKg: number
     aiProfileSummary: string
+    actionFrequency?: number // Hours between actions (1-24)
   }
+}
+
+function getFrequencyLabel(hours: number): string {
+  if (hours === 1) return 'One personalized micro-action every hour'
+  if (hours === 24) return 'One personalized micro-action per day'
+  const actionsPerDay = Math.floor(24 / hours)
+  if (actionsPerDay === 1) return 'One personalized micro-action per day'
+  return `~${actionsPerDay} personalized micro-actions per day`
 }
 
 const categoryLabels: Record<string, { label: string; abbr: string; color: string }> = {
@@ -97,7 +106,7 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
           {formatCO2(profile.estimatedAnnualFootprintKg)}
         </div>
         <div className="text-green-400 text-sm">
-          CO₂ per year (US average: 16,000 kg)
+          CO₂ per year (US average: ~16 tonnes)
         </div>
       </motion.div>
 
@@ -161,7 +170,7 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
         transition={{ delay: 1.2 }}
         className="text-center text-green-400 text-sm mt-4"
       >
-        One personalized micro-action per day
+        {getFrequencyLabel(profile.actionFrequency || 24)}
       </motion.p>
     </motion.div>
   )

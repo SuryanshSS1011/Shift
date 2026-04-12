@@ -154,6 +154,17 @@ export function Header({ showBackButton, onBack, showMenu = false, isDemoMode = 
                             </Link>
 
                             <Link
+                              href="/eco-llm"
+                              className="flex items-center gap-3 px-4 py-3 text-green-50 hover:bg-green-800/30 transition-colors"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              Eco LLM
+                            </Link>
+
+                            <Link
                               href="/history"
                               className="flex items-center gap-3 px-4 py-3 text-green-50 hover:bg-green-800/30 transition-colors"
                               onClick={() => setMenuOpen(false)}
@@ -185,17 +196,6 @@ export function Header({ showBackButton, onBack, showMenu = false, isDemoMode = 
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               </svg>
                               Settings
-                            </Link>
-
-                            <Link
-                              href="/eco-llm"
-                              className="flex items-center gap-3 px-4 py-3 text-green-50 hover:bg-green-800/30 transition-colors"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                              </svg>
-                              Eco LLM
                             </Link>
 
                             <div className="border-t border-green-800/30 my-1" />

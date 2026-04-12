@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { MicroActionCard } from '@/components/dashboard/MicroActionCard'
+import { MicroActionCard, MicroActionCardSkeleton } from '@/components/dashboard/MicroActionCard'
 import { StreakDisplay } from '@/components/dashboard/StreakDisplay'
 import { ImpactDashboard } from '@/components/dashboard/ImpactDashboard'
+import { GridIntensityWidget } from '@/components/dashboard/GridIntensityWidget'
 import { CelebrationOverlay } from '@/components/dashboard/CelebrationOverlay'
+import { ActivityHeatmap } from '@/components/dashboard/ActivityHeatmap'
+import { WeeklyReport } from '@/components/dashboard/WeeklyReport'
+import { useDemoMode } from '@/lib/hooks/useDemoMode'
 
 interface Action {
   id: string
@@ -22,6 +26,18 @@ interface Action {
   completed: boolean
 }
 
+interface GridData {
+  zone: string
+  carbonIntensity: number
+  renewablePercent: number
+}
+
+interface WeeklyReportData {
+  whatWentWell: string
+  patternObserved: string
+  focusThisWeek: string
+}
+
 interface DashboardData {
   action: Action | null
   streak: { current: number; longest: number }
@@ -30,33 +46,76 @@ interface DashboardData {
     totalDollarSaved: number
     totalActionsCompleted: number
   }
+  grid: GridData | null
+  completedDates: string[]
+  weeklyReport: WeeklyReportData | null
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
+  const demoMode = useDemoMode()
   const [sessionId, setSessionId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [isCompleting, setIsCompleting] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<DashboardData>({
     action: null,
     streak: { current: 0, longest: 0 },
     totals: { totalCo2SavedKg: 0, totalDollarSaved: 0, totalActionsCompleted: 0 },
+    grid: null,
+    completedDates: [],
+    weeklyReport: null,
   })
 
-  // Get session ID
+  // Get session ID (demo mode uses hardcoded)
   useEffect(() => {
+    if (demoMode.isDemoMode) {
+      setSessionId(demoMode.sessionId)
+      // Generate demo completed dates (last 12 days for demo streak)
+      const demoDates: string[] = []
+      const today = new Date()
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - i)
+        demoDates.push(date.toISOString().split('T')[0])
+      }
+      // Add some random older dates
+      for (let i = 15; i < 25; i++) {
+        if (Math.random() > 0.5) {
+          const date = new Date(today)
+          date.setDate(date.getDate() - i)
+          demoDates.push(date.toISOString().split('T')[0])
+        }
+      }
+      setData((prev) => ({
+        ...prev,
+        streak: demoMode.streak,
+        totals: demoMode.totals,
+        grid: demoMode.grid,
+        completedDates: demoDates,
+        weeklyReport: {
+          whatWentWell: "You've been incredibly consistent with your food choices this week. Swapping beef for plant-based alternatives 4 times saved significant CO₂ and money.",
+          patternObserved: "Your actions tend to be strongest in the morning, particularly around breakfast and commute decisions. Evening energy habits could use more attention.",
+          focusThisWeek: "Try unplugging devices before bed — it's a quick win that compounds over time. Your transit choices have been excellent, keep that momentum going.",
+        },
+      }))
+      return
+    }
+
     const storedSessionId = localStorage.getItem('shift_session_id')
     if (!storedSessionId) {
       router.push('/onboarding')
       return
     }
     setSessionId(storedSessionId)
-  }, [router])
+  }, [router, demoMode])
 
   // Fetch today's action
   const fetchAction = useCallback(async () => {
     if (!sessionId) return
+
+    setError(null)
 
     try {
       const response = await fetch('/api/generate-action', {
@@ -69,8 +128,10 @@ export default function DashboardPage() {
 
       if (response.status === 404) {
         // User not found - redirect to onboarding
-        localStorage.removeItem('shift_session_id')
-        router.push('/onboarding')
+        if (!demoMode.isDemoMode) {
+          localStorage.removeItem('shift_session_id')
+          router.push('/onboarding')
+        }
         return
       }
 
@@ -79,19 +140,47 @@ export default function DashboardPage() {
           ...prev,
           action: result.data,
         }))
+      } else {
+        setError('Unable to generate action. Please try again.')
       }
-    } catch (error) {
-      console.error('Error fetching action:', error)
+    } catch (err) {
+      console.error('Error fetching action:', err)
+      setError('Unable to load action. Please refresh.')
     } finally {
       setIsLoading(false)
     }
-  }, [sessionId, router])
+  }, [sessionId, router, demoMode.isDemoMode])
+
+  // Fetch grid intensity
+  const fetchGrid = useCallback(async () => {
+    if (!sessionId || demoMode.isDemoMode) return
+
+    try {
+      const response = await fetch('/api/grid-intensity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setData((prev) => ({
+          ...prev,
+          grid: result.data,
+        }))
+      }
+    } catch (err) {
+      console.error('Error fetching grid:', err)
+    }
+  }, [sessionId, demoMode.isDemoMode])
 
   useEffect(() => {
     if (sessionId) {
       fetchAction()
+      fetchGrid()
     }
-  }, [sessionId, fetchAction])
+  }, [sessionId, fetchAction, fetchGrid])
 
   // Complete action
   const handleComplete = async () => {
@@ -113,14 +202,15 @@ export default function DashboardPage() {
 
       if (result.success) {
         setData((prev) => ({
+          ...prev,
           action: prev.action ? { ...prev.action, completed: true } : null,
           streak: result.data.streak,
           totals: result.data.totals,
         }))
         setShowCelebration(true)
       }
-    } catch (error) {
-      console.error('Error completing action:', error)
+    } catch (err) {
+      console.error('Error completing action:', err)
     } finally {
       setIsCompleting(false)
     }
@@ -129,18 +219,6 @@ export default function DashboardPage() {
   const closeCelebration = useCallback(() => {
     setShowCelebration(false)
   }, [])
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0f1a0f] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-green-400">Loading your action...</p>
-        </div>
-      </div>
-    )
-  }
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -163,6 +241,11 @@ export default function DashboardPage() {
                 <span className="text-white font-bold text-sm">S</span>
               </div>
               <span className="text-xl font-bold text-green-50">Shift</span>
+              {demoMode.isDemoMode && (
+                <span className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full">
+                  Demo
+                </span>
+              )}
             </div>
             <div className="text-green-400 text-sm">{today}</div>
           </div>
@@ -176,7 +259,29 @@ export default function DashboardPage() {
           <h2 className="text-green-300 text-sm font-medium mb-3">
             Today&apos;s Action
           </h2>
-          {data.action ? (
+          {isLoading ? (
+            <MicroActionCardSkeleton />
+          ) : error ? (
+            <div className="bg-[#1a2e1a] rounded-2xl p-6 border border-red-800/30">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <p className="text-red-400 mb-4">{error}</p>
+                <button
+                  onClick={() => {
+                    setIsLoading(true)
+                    fetchAction()
+                  }}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          ) : data.action ? (
             <MicroActionCard
               action={data.action}
               onComplete={handleComplete}
@@ -190,6 +295,17 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Grid Intensity */}
+        {data.grid && (
+          <section>
+            <GridIntensityWidget
+              zone={data.grid.zone}
+              carbonIntensity={data.grid.carbonIntensity}
+              renewablePercent={data.grid.renewablePercent}
+            />
+          </section>
+        )}
 
         {/* Streak */}
         <section>
@@ -210,6 +326,19 @@ export default function DashboardPage() {
             totalActionsCompleted={data.totals.totalActionsCompleted}
           />
         </section>
+
+        {/* Activity Heatmap */}
+        <section>
+          <ActivityHeatmap completedDates={data.completedDates} />
+        </section>
+
+        {/* Weekly Report */}
+        <section>
+          <WeeklyReport
+            report={data.weeklyReport}
+            totalActionsCompleted={data.totals.totalActionsCompleted}
+          />
+        </section>
       </main>
 
       {/* Celebration Overlay */}
@@ -220,5 +349,23 @@ export default function DashboardPage() {
         streak={data.streak.current}
       />
     </div>
+  )
+}
+
+// Wrap in Suspense for useSearchParams
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0f1a0f] flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-green-400">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   )
 }

@@ -20,6 +20,56 @@ interface MicroActionCardProps {
   isCompleting: boolean
 }
 
+// Loading skeleton that matches the card's exact height
+export function MicroActionCardSkeleton() {
+  return (
+    <div className="bg-[#1a2e1a] rounded-2xl overflow-hidden border border-green-800/30 animate-pulse">
+      {/* Category Badge skeleton */}
+      <div className="px-6 py-3 bg-green-800/20 flex items-center gap-2">
+        <div className="w-6 h-6 bg-green-800/30 rounded" />
+        <div className="w-16 h-4 bg-green-800/30 rounded" />
+        <div className="ml-auto w-12 h-4 bg-green-800/30 rounded" />
+      </div>
+
+      {/* Content skeleton */}
+      <div className="p-6">
+        {/* Title */}
+        <div className="h-6 bg-green-800/30 rounded w-3/4 mb-3" />
+
+        {/* Anchor Habit */}
+        <div className="bg-[#0f1a0f] rounded-xl p-4 mb-4">
+          <div className="h-4 bg-green-800/30 rounded w-1/4 mb-2" />
+          <div className="h-5 bg-green-800/30 rounded w-2/3" />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2 mb-6">
+          <div className="h-4 bg-green-800/30 rounded w-full" />
+          <div className="h-4 bg-green-800/30 rounded w-5/6" />
+        </div>
+
+        {/* Impact Stats */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-[#0f1a0f] rounded-xl p-4">
+            <div className="h-8 bg-green-800/30 rounded w-1/2 mx-auto mb-2" />
+            <div className="h-4 bg-green-800/30 rounded w-2/3 mx-auto" />
+          </div>
+          <div className="bg-[#0f1a0f] rounded-xl p-4">
+            <div className="h-8 bg-green-800/30 rounded w-1/2 mx-auto mb-2" />
+            <div className="h-4 bg-green-800/30 rounded w-2/3 mx-auto" />
+          </div>
+        </div>
+
+        {/* Equivalency */}
+        <div className="h-4 bg-green-800/30 rounded w-1/2 mx-auto mb-6" />
+
+        {/* Button */}
+        <div className="h-14 bg-green-800/30 rounded-xl" />
+      </div>
+    </div>
+  )
+}
+
 const categoryConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   food: { label: 'F', color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
   transport: { label: 'T', color: 'text-blue-500', bgColor: 'bg-blue-500/10' },

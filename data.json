@@ -1,0 +1,30 @@
+{
+  "models": {
+    "gpt-3.5-turbo": {
+      "energy_kwh_per_1k_tokens": 0.001,
+      "water_ml_per_1k_tokens": 0.5
+    },
+    "gpt-4": {
+      "energy_kwh_per_1k_tokens": 0.01,
+      "water_ml_per_1k_tokens": 5.0
+    },
+    "gemini-pro": {
+      "energy_kwh_per_1k_tokens": 0.005,
+      "water_ml_per_1k_tokens": 2.5
+    }
+  },
+  "regions": {
+    "us-east": {
+      "carbon_g_per_kwh": 380,
+      "sustainability_score": 60
+    },
+    "us-west": {
+      "carbon_g_per_kwh": 250,
+      "sustainability_score": 80
+    },
+    "eu-central": {
+      "carbon_g_per_kwh": 300,
+      "sustainability_score": 75
+    }
+  }
+}

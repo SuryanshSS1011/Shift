@@ -1,26 +1,81 @@
 'use client'
 
-interface QuestionCardProps {
-  question: string
-  options: Array<{ label: string; emoji: string; value: string }>
-  onSelect: (value: string) => void
+import { motion } from 'framer-motion'
+
+interface Option {
+  label: string
+  value: string
+  description?: string
 }
 
-export function QuestionCard({ question, options, onSelect }: QuestionCardProps) {
+interface QuestionCardProps {
+  question: string
+  options: Option[]
+  onSelect: (value: string) => void
+  currentStep: number
+  totalSteps: number
+}
+
+export function QuestionCard({
+  question,
+  options,
+  onSelect,
+  currentStep,
+  totalSteps,
+}: QuestionCardProps) {
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-semibold text-foreground mb-4">{question}</h2>
-      <div className="space-y-2">
-        {options.map((option) => (
-          <button
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="w-full max-w-lg mx-auto px-4"
+    >
+      {/* Progress indicator */}
+      <div className="mb-8">
+        <div className="flex justify-between text-sm text-green-400 mb-2">
+          <span>Question {currentStep} of {totalSteps}</span>
+          <span>{Math.round((currentStep / totalSteps) * 100)}%</span>
+        </div>
+        <div className="h-2 bg-[#1a2e1a] rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-green-600 rounded-full"
+            initial={{ width: `${((currentStep - 1) / totalSteps) * 100}%` }}
+            animate={{ width: `${(currentStep / totalSteps) * 100}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+
+      {/* Question */}
+      <h2 className="text-2xl font-semibold text-green-50 mb-6 text-center">
+        {question}
+      </h2>
+
+      {/* Options */}
+      <div className="space-y-3">
+        {options.map((option, index) => (
+          <motion.button
             key={option.value}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
             onClick={() => onSelect(option.value)}
-            className="w-full p-4 text-left rounded-lg bg-card hover:bg-accent transition-colors"
+            className="w-full p-4 text-left rounded-xl bg-[#1a2e1a] hover:bg-[#243824]
+                       border border-green-800/30 hover:border-green-600/50
+                       transition-all duration-200 group"
           >
-            {option.emoji} {option.label}
-          </button>
+            <div>
+              <div className="text-green-50 font-medium">{option.label}</div>
+              {option.description && (
+                <div className="text-green-400 text-sm mt-0.5">
+                  {option.description}
+                </div>
+              )}
+            </div>
+          </motion.button>
         ))}
       </div>
-    </div>
+    </motion.div>
   )
 }

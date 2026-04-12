@@ -14,6 +14,16 @@
         #status-box { display:none; padding: 15px; margin-top: 20px; border-radius: 6px; font-weight: bold; text-align: center; }
         #result { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; margin-top: 15px; white-space: pre-wrap; font-family: 'Consolas', monospace; font-size: 13px; border-left: 5px solid #007bff; }
         .hint { font-size: 12px; color: #666; font-style: italic; }
+        #grid-advisory { display: none; margin-top: 16px; padding: 12px 14px; border-radius: 8px; border: 1px solid #cfe2ff; background: #e7f1ff; color: #084298; font-size: 14px; }
+        #grid-advisory.peak { border-color: #f5c2c7; background: #f8d7da; color: #842029; }
+        #batch-panel { margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; }
+        #batch-panel h3 { margin: 0 0 10px 0; font-size: 16px; color: #333; }
+        #batch-list { list-style: none; padding: 0; margin: 0; }
+        #batch-list li { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+        .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .row-actions button { width: auto; flex: 1; min-width: 120px; margin-top: 0; font-size: 14px; }
+        .secondary { background: #6c757d; }
+        .secondary:hover { background: #5c636a; }
     </style>
 </head>
 <body>
@@ -36,42 +46,174 @@
             <option value="gpt-4o">GPT-4o</option>
             <option value="gemini-pro">Gemini Pro</option>
         </select>
+
+        <label>Grid / carbon region (for peak-hour modeling):</label>
+        <select id="region">
+            <option value="us-east">US East</option>
+            <option value="us-west">US West</option>
+            <option value="eu-central">EU Central</option>
+        </select>
+
+        <label style="display:flex; align-items:center; gap:10px; font-weight:normal;">
+            <input type="checkbox" id="enableGridScheduling" checked style="width:auto; margin:0;">
+            <span><strong>Batch / greener timing</strong> — use your clock &amp; timezone to flag high modeled grid demand and suggest the next calmer window.</span>
+        </label>
         
         <label>Tokens:</label>
         <input type="number" id="tokens" value="1000">
         
-        <button onclick="sendRequest()">Send Prompt</button>
+        <button type="button" onclick="sendRequest()">Send Prompt</button>
+        <div class="row-actions">
+            <button type="button" class="secondary" onclick="addLastResponseToBatch()" id="btnAddBatch" disabled title="Available after a response where modeled grid demand is high">Defer: add to batch queue</button>
+            <button type="button" class="secondary" onclick="clearBatchQueue()">Clear batch queue</button>
+        </div>
+
+        <div id="grid-advisory" role="status"></div>
+
+        <div id="batch-panel">
+            <h3>Batched prompts (stored in this browser)</h3>
+            <p class="hint">When the server says demand is high, you can queue the same prompt idea and run it after the suggested local time — a simple stand-in for a real job scheduler.</p>
+            <ul id="batch-list"></ul>
+        </div>
         
         <div id="status-box"></div>
         <div id="result">Waiting for input...</div>
     </div>
 
     <script>
+        const BATCH_STORAGE_KEY = 'ecoAiBatchQueue_v1';
+        let lastCostResponse = null;
+
+        function loadBatchQueue() {
+            try {
+                const raw = localStorage.getItem(BATCH_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveBatchQueue(items) {
+            localStorage.setItem(BATCH_STORAGE_KEY, JSON.stringify(items));
+        }
+
+        function renderBatchList() {
+            const ul = document.getElementById('batch-list');
+            const items = loadBatchQueue();
+            ul.innerHTML = '';
+            if (items.length === 0) {
+                ul.innerHTML = '<li class="hint">No batched items yet.</li>';
+                return;
+            }
+            items.forEach((item, idx) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>Run after:</strong> ${item.runAfterLocal}<br><strong>Prompt:</strong> ${escapeHtml(item.promptSnippet)}`;
+                const rm = document.createElement('button');
+                rm.type = 'button';
+                rm.textContent = 'Remove';
+                rm.className = 'secondary';
+                rm.style.marginTop = '8px';
+                rm.onclick = () => {
+                    const next = loadBatchQueue().filter((_, i) => i !== idx);
+                    saveBatchQueue(next);
+                    renderBatchList();
+                };
+                li.appendChild(rm);
+                ul.appendChild(li);
+            });
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function renderGridAdvisory(data) {
+            const box = document.getElementById('grid-advisory');
+            const gs = data.gridScheduling;
+            if (!gs || gs.error) {
+                box.style.display = 'none';
+                box.classList.remove('peak');
+                if (gs && gs.error) {
+                    box.style.display = 'block';
+                    box.classList.remove('peak');
+                    box.textContent = 'Grid timing: ' + gs.error;
+                }
+                return;
+            }
+            box.style.display = 'block';
+            box.classList.toggle('peak', !!gs.isPeakDemand);
+            box.innerHTML = gs.isPeakDemand
+                ? `<strong>High modeled demand now.</strong> ${gs.message}<br><small>Suggested window starts (local): <strong>${gs.suggestDeferUntilLocal || gs.recommendedRunAtLocal}</strong></small>`
+                : `<strong>Lower modeled demand now.</strong> ${gs.message}`;
+        }
+
+        function addLastResponseToBatch() {
+            if (!lastCostResponse || !lastCostResponse.gridScheduling) return;
+            const gs = lastCostResponse.gridScheduling;
+            if (gs.error) return;
+            const prompt = document.getElementById('prompt').value.trim() || '(empty prompt)';
+            const snippet = prompt.length > 120 ? prompt.slice(0, 117) + '…' : prompt;
+            const runAfterLocal = gs.suggestDeferUntilLocal || gs.recommendedRunAtLocal;
+            const runAfterUtc = gs.suggestDeferUntilUtc || gs.recommendedRunAtUtc;
+            const entry = {
+                id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+                addedAtUtc: new Date().toISOString(),
+                runAfterUtc,
+                runAfterLocal,
+                promptSnippet: snippet,
+                region: gs.region,
+                timeZone: gs.timeZone
+            };
+            const items = loadBatchQueue();
+            items.unshift(entry);
+            saveBatchQueue(items);
+            renderBatchList();
+        }
+
+        function clearBatchQueue() {
+            saveBatchQueue([]);
+            renderBatchList();
+        }
+
         async function sendRequest() {
             const resultDiv = document.getElementById('result');
             const statusBox = document.getElementById('status-box');
+            const btnBatch = document.getElementById('btnAddBatch');
             resultDiv.innerText = "Analyzing Context...";
             statusBox.style.display = "none";
+            document.getElementById('grid-advisory').style.display = 'none';
+            lastCostResponse = null;
+            btnBatch.disabled = true;
             
             try {
+                const enableGrid = document.getElementById('enableGridScheduling').checked;
+                const payload = {
+                    conversationId: document.getElementById('convoId').value,
+                    prompt: document.getElementById('prompt').value,
+                    aiResponse: document.getElementById('aiResponse').value,
+                    model: document.getElementById('model').value,
+                    region: document.getElementById('region').value,
+                    tokenCount: parseInt(document.getElementById('tokens').value, 10)
+                };
+                if (enableGrid) {
+                    payload.enableGridScheduling = true;
+                    payload.clientTimestamp = new Date().toISOString();
+                    payload.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                }
+
                 const response = await fetch('http://localhost:3000/calculate-cost', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        conversationId: document.getElementById('convoId').value,
-                        prompt: document.getElementById('prompt').value,
-                        aiResponse: document.getElementById('aiResponse').value,
-                        model: document.getElementById('model').value,
-                        tokenCount: parseInt(document.getElementById('tokens').value)
-                    })
+                    body: JSON.stringify(payload)
                 });
                 
                 const data = await response.json();
+                lastCostResponse = data;
                 
                 statusBox.style.display = "block";
-                statusBox.innerText = data.message;
+                statusBox.innerText = data.message || (data.error ? String(data.error) : 'Done');
 
-                if (data.source.includes("CONTEXT")) {
+                if (data.source && data.source.includes("SEMANTIC")) {
                     statusBox.style.background = "#d1e7dd";
                     statusBox.style.color = "#0f5132";
                     resultDiv.style.borderLeftColor = "#198754";
@@ -81,11 +223,18 @@
                     resultDiv.style.borderLeftColor = "#ffc107";
                 }
 
+                renderGridAdvisory(data);
+                if (enableGrid && data.gridScheduling && !data.gridScheduling.error && data.gridScheduling.isPeakDemand) {
+                    btnBatch.disabled = false;
+                }
+
                 resultDiv.innerText = JSON.stringify(data, null, 2);
             } catch (err) {
                 resultDiv.innerText = "Error: " + err.message;
             }
         }
+
+        renderBatchList();
     </script>
 </body>
 </html>

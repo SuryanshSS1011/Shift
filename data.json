@@ -16,15 +16,27 @@
   "regions": {
     "us-east": {
       "carbon_g_per_kwh": 380,
-      "sustainability_score": 60
+      "sustainability_score": 60,
+      "defaultTimeZone": "America/New_York",
+      "grid_peak_windows": [
+        { "days": [1, 2, 3, 4, 5], "startHour": 16, "endHour": 22, "label": "weekday late-afternoon / evening peak" }
+      ]
     },
     "us-west": {
       "carbon_g_per_kwh": 250,
-      "sustainability_score": 80
+      "sustainability_score": 80,
+      "defaultTimeZone": "America/Los_Angeles",
+      "grid_peak_windows": [
+        { "days": [1, 2, 3, 4, 5], "startHour": 16, "endHour": 22, "label": "weekday late-afternoon / evening peak" }
+      ]
     },
     "eu-central": {
       "carbon_g_per_kwh": 300,
-      "sustainability_score": 75
+      "sustainability_score": 75,
+      "defaultTimeZone": "Europe/Berlin",
+      "grid_peak_windows": [
+        { "days": [1, 2, 3, 4, 5], "startHour": 17, "endHour": 21, "label": "weekday early-evening peak" }
+      ]
     }
   }
 }

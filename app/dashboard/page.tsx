@@ -94,6 +94,7 @@ function DashboardContent() {
       }
       setData((prev) => ({
         ...prev,
+        action: demoMode.action,
         streak: demoMode.streak,
         totals: demoMode.totals,
         grid: demoMode.grid,
@@ -105,6 +106,7 @@ function DashboardContent() {
           focusThisWeek: "Try unplugging devices before bed — it's a quick win that compounds over time. Your transit choices have been excellent, keep that momentum going.",
         },
       }))
+      setIsLoading(false)
       return
     }
 
@@ -118,7 +120,7 @@ function DashboardContent() {
 
   // Fetch today's action
   const fetchAction = useCallback(async () => {
-    if (!sessionId) return
+    if (!sessionId || demoMode.isDemoMode) return
 
     setError(null)
 
@@ -322,15 +324,18 @@ function DashboardContent() {
           )}
         </section>
 
-        {/* Streak - Full width */}
+        {/* Activities Panel - Streak + Heatmap */}
         <section>
-          <h2 className="text-green-300 text-sm font-medium mb-3">
-            Your Streak
+          <h2 className="text-lg font-semibold text-green-50 mb-3">
+            Your Activity
           </h2>
-          <StreakDisplay
-            currentStreak={data.streak.current}
-            longestStreak={data.streak.longest}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4">
+            <StreakDisplay
+              currentStreak={data.streak.current}
+              longestStreak={data.streak.longest}
+            />
+            <ActivityHeatmap completedDates={data.completedDates} />
+          </div>
         </section>
 
         {/* Impact - Full width */}
@@ -340,11 +345,6 @@ function DashboardContent() {
             totalDollarSaved={data.totals.totalDollarSaved}
             totalActionsCompleted={data.totals.totalActionsCompleted}
           />
-        </section>
-
-        {/* Activity Heatmap - Full width */}
-        <section>
-          <ActivityHeatmap completedDates={data.completedDates} />
         </section>
 
         {/* Your Local Grid Insights - Full width */}

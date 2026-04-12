@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion'
 import { TrendingUp } from 'lucide-react'
 import { ForecastChart } from './ForecastChart'
-import { BestTimeBadge } from './BestTimeBadge'
 import type { GridForecastResponse } from '@/types/grid'
 
 interface GridForecastWidgetProps {
@@ -55,17 +54,7 @@ export function GridForecastWidget({
         </span>
       </div>
 
-      {/* Best Time Badge */}
-      <div className="mb-4">
-        <BestTimeBadge
-          bestTimeLabel={forecast.bestTime.label}
-          currentLevel={forecast.currentLevel}
-          avgIntensity={forecast.bestTime.intensity}
-          currentIntensity={forecast.currentIntensity}
-        />
-      </div>
-
-      {/* Chart - Always visible */}
+      {/* Chart */}
       <div className="pt-3 border-t border-green-800/30">
         <ForecastChart
           forecast={forecast.forecast}

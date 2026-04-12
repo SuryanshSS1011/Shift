@@ -30,11 +30,11 @@ export function ActivityHeatmap({ completedDates }: ActivityHeatmapProps) {
   }
 
   return (
-    <div className="bg-[#1a2e1a] rounded-2xl p-6 border border-green-800/30">
+    <div className="bg-[#1a2e1a] rounded-2xl p-6 border border-green-800/30 h-full flex flex-col">
       <h3 className="text-green-300 text-sm font-medium mb-4">
         12-Week Activity
       </h3>
-      <div className="w-full flex justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <ActivityCalendar
           data={data}
           blockSize={14}

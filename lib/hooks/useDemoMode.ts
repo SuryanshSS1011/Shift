@@ -35,6 +35,20 @@ const DEMO_GRID = {
   fossilFuelPercent: 66,
 }
 
+const DEMO_ACTION = {
+  id: 'demo-action-001',
+  category: 'food',
+  title: 'Swap beef for chicken at dinner tonight',
+  description: 'Choose chicken, fish, or a plant-based protein instead of beef for your evening meal. This simple swap saves significant CO₂ while still giving you a satisfying, protein-rich dinner.',
+  anchorHabit: 'When you start planning dinner',
+  co2SavingsKg: 1.5,
+  dollarSavings: 2.0,
+  timeRequiredMinutes: 0,
+  difficultyLevel: 'easy',
+  equivalencyLabel: '= 3.7 miles not driven',
+  completed: false,
+}
+
 // Generate demo forecast data for 24 hours
 function generateDemoForecast(): ForecastDataPoint[] {
   const now = new Date()
@@ -91,6 +105,7 @@ export interface DemoData {
   totals: typeof DEMO_TOTALS
   grid: typeof DEMO_GRID
   gridForecast: GridForecastResponse
+  action: typeof DEMO_ACTION
   sessionId: string
 }
 
@@ -108,6 +123,7 @@ export function useDemoMode(): DemoData {
     totals: DEMO_TOTALS,
     grid: DEMO_GRID,
     gridForecast: DEMO_GRID_FORECAST,
+    action: DEMO_ACTION,
     sessionId: 'demo-session-id',
   }
 }

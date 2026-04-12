@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { TrendingUp, AlertTriangle, Zap, Clock } from 'lucide-react'
+import { TrendingUp, AlertTriangle, Zap } from 'lucide-react'
 import { ForecastChart } from './ForecastChart'
 import type { GridForecastResponse } from '@/types/grid'
 
@@ -56,16 +56,16 @@ export function GridForecastWidget({
 
     if (bestTimeLevel === 'moderate_fallback') {
       return (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-            <Clock className="w-4 h-4 text-yellow-400" />
-            <span className="text-yellow-300 text-sm">
-              Lower emissions: <span className="font-medium text-yellow-50">{forecast.bestTime.label}</span>
-            </span>
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5" />
+          <div>
+            <p className="text-yellow-300 text-sm">
+              No low-emission times found in the next 24 hours.
+            </p>
+            <p className="text-yellow-50 text-sm mt-1">
+              Best available: <span className="font-medium">{forecast.bestTime.label}</span>
+            </p>
           </div>
-          <p className="text-yellow-400/70 text-xs px-1">
-            No low-emission windows today. This is the best available time.
-          </p>
         </div>
       )
     }
@@ -75,8 +75,10 @@ export function GridForecastWidget({
       <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
         <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5" />
         <div>
-          <span className="text-red-300 text-sm font-medium">High emissions all day</span>
-          <p className="text-red-400/70 text-xs mt-0.5">
+          <p className="text-red-300 text-sm">
+            All times in the next 24 hours have high emissions.
+          </p>
+          <p className="text-red-400/70 text-xs mt-1">
             Consider postponing high-energy activities if possible.
           </p>
         </div>

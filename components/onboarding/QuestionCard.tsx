@@ -6,10 +6,12 @@ interface Option {
   label: string
   value: string
   description?: string
+  emoji?: string
 }
 
 interface QuestionCardProps {
   question: string
+  subtitle?: string
   options: Option[]
   onSelect: (value: string) => void
   currentStep: number
@@ -18,6 +20,7 @@ interface QuestionCardProps {
 
 export function QuestionCard({
   question,
+  subtitle,
   options,
   onSelect,
   currentStep,
@@ -48,9 +51,12 @@ export function QuestionCard({
       </div>
 
       {/* Question */}
-      <h2 className="text-2xl font-semibold text-green-50 mb-6 text-center">
+      <h2 className="text-2xl font-semibold text-green-50 mb-2 text-center">
         {question}
       </h2>
+      {subtitle && (
+        <p className="text-green-400 text-center mb-6">{subtitle}</p>
+      )}
 
       {/* Options */}
       <div className="space-y-3">
@@ -63,10 +69,15 @@ export function QuestionCard({
             onClick={() => onSelect(option.value)}
             className="w-full p-4 text-left rounded-xl bg-[#1a2e1a] hover:bg-[#243824]
                        border border-green-800/30 hover:border-green-600/50
-                       transition-all duration-200 group"
+                       transition-all duration-200 group flex items-center gap-4"
           >
+            {option.emoji && (
+              <span className="text-2xl flex-shrink-0">{option.emoji}</span>
+            )}
             <div>
-              <div className="text-green-50 font-medium">{option.label}</div>
+              <div className="text-green-50 font-medium group-hover:text-green-300 transition-colors">
+                {option.label}
+              </div>
               {option.description && (
                 <div className="text-green-400 text-sm mt-0.5">
                   {option.description}

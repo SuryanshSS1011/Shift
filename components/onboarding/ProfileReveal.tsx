@@ -35,7 +35,7 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
       transition={{ duration: 0.5 }}
       className="w-full max-w-lg mx-auto px-4"
     >
-      {/* Header */}
+      {/* Header with animated checkmark */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -46,9 +46,24 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200, damping: 10, delay: 0.3 }}
-          className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-full mb-4"
+          className="inline-flex items-center justify-center w-20 h-20 bg-green-600 rounded-full mb-4"
         >
-          <span className="text-white text-xl font-bold">S</span>
+          <svg
+            className="w-10 h-10 text-white"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <motion.path
+              d="M5 13l4 4L19 7"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ delay: 0.5, duration: 0.4, ease: 'easeOut' }}
+            />
+          </svg>
         </motion.div>
         <h2 className="text-2xl font-bold text-green-50 mb-2">
           Your Sustainability Profile

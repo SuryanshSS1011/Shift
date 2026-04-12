@@ -60,9 +60,110 @@ function formatRangeDisplay(metric, type) {
   return `${formatNum(min)} – ${formatNum(max)} ${unit}`;
 }
 
-// Inject the live monitor UI (above the input area)
+// ── Grid Intensity Forecast (heuristic-based) ──
+// Google's Gemini serves from US data centers (Iowa, Oregon, S. Carolina).
+// Without direct Electricity Maps access from a content script, we use
+// time-based heuristics that mirror typical US grid carbon patterns:
+//   Solar peak (10 AM–3 PM)  → low carbon    (green)
+//   Morning/afternoon ramp   → moderate       (yellow)
+//   Evening demand peak      → high carbon    (red)
+//   Overnight baseload       → moderate       (yellow)
+
+function generateGridForecast() {
+  const now = new Date();
+  const forecast = [];
+
+  for (let i = -12; i < 12; i++) {
+    const dt = new Date(now);
+    dt.setHours(now.getHours() + i, 0, 0, 0);
+    const hour = dt.getHours();
+
+    let intensity;
+    if (hour >= 10 && hour <= 15) {
+      intensity = 130 + Math.sin((hour - 10) * Math.PI / 5) * 40;  // valley
+    } else if (hour >= 6 && hour < 10) {
+      intensity = 250 - (hour - 6) * 25;  // ramp down toward solar
+    } else if (hour > 15 && hour < 17) {
+      intensity = 180 + (hour - 15) * 50;  // ramp up from solar
+    } else if (hour >= 17 && hour <= 21) {
+      intensity = 340 + Math.sin((hour - 17) * Math.PI / 4) * 80;  // peak
+    } else if (hour > 21) {
+      intensity = 320 - (hour - 21) * 25;  // post-peak decline
+    } else {
+      intensity = 240 - hour * 5;  // overnight slow decline
+    }
+
+    // Add slight deterministic variation per-hour so bars aren't perfectly smooth
+    intensity += ((hour * 7 + dt.getDate() * 3) % 20) - 10;
+
+    forecast.push({
+      hour: hour,
+      intensity: Math.round(Math.max(80, Math.min(450, intensity))),
+      isCurrent: i === 0
+    });
+  }
+  return forecast;
+}
+
+function getIntensityLevel(intensity) {
+  if (intensity < 200) return 'low';
+  if (intensity < 340) return 'moderate';
+  return 'high';
+}
+
+function getGridStatusText(level) {
+  switch (level) {
+    case 'low':      return { label: 'Off-peak', detail: 'Low grid carbon — good time to prompt' };
+    case 'moderate': return { label: 'Moderate', detail: 'Average grid demand' };
+    case 'high':     return { label: 'Peak hours', detail: 'High grid carbon — consider deferring' };
+    default:         return { label: 'Unknown', detail: '' };
+  }
+}
+
+function formatHour12(h) {
+  if (h === 0 || h === 24) return '12a';
+  if (h === 12) return '12p';
+  return h < 12 ? `${h}a` : `${h - 12}p`;
+}
+
+function buildGridChartHTML() {
+  const forecast = generateGridForecast();
+  const currentEntry = forecast.find(f => f.isCurrent) || forecast[12];
+  const currentLevel = getIntensityLevel(currentEntry.intensity);
+  const status = getGridStatusText(currentLevel);
+
+  const maxIntensity = Math.max(...forecast.map(f => f.intensity));
+
+  const bars = forecast.map(f => {
+    const level = getIntensityLevel(f.intensity);
+    const height = Math.max(2, Math.round((f.intensity / maxIntensity) * 22));
+    const nowClass = f.isCurrent ? ' shift-bar-now' : '';
+    const futureClass = (!f.isCurrent && forecast.indexOf(f) > forecast.findIndex(x => x.isCurrent)) ? ' shift-bar-future' : '';
+    const tooltip = `<span class="shift-grid-tooltip">${formatHour12(f.hour)} · ${f.intensity} gCO₂</span>`;
+    return `<div class="shift-grid-bar shift-bar-${level}${nowClass}${futureClass}" style="height:${height}px">${tooltip}</div>`;
+  }).join('');
+
+  return {
+    chart: `<div class="shift-grid-chart">${bars}</div>`,
+    status: `
+      <div class="shift-grid-status">
+        <span class="shift-grid-dot shift-dot-${currentLevel}"></span>
+        <span class="shift-grid-label">
+          <strong>${status.label}</strong>
+          <span class="shift-grid-sublabel"> · US grid</span>
+        </span>
+      </div>
+    `,
+    detail: status.detail,
+    level: currentLevel
+  };
+}
+
+// ── Inject the live monitor UI (above the input area) ──
 function injectLiveMonitor(inputParent) {
   if (document.getElementById('shift-live-monitor')) return;
+
+  const grid = buildGridChartHTML();
 
   const monitor = document.createElement('div');
   monitor.id = 'shift-live-monitor';
@@ -73,6 +174,10 @@ function injectLiveMonitor(inputParent) {
       <span id="shift-live-tokens">0 tokens (Fast)</span>
       <span id="shift-live-impact" style="color: #666;">⚡ 0.000 Wh</span>
       <span id="shift-live-searching" class="shift-live-searching" style="display:none;">Searching cache</span>
+    </div>
+    <div class="shift-grid-row" id="shift-grid-row" title="${grid.detail}">
+      ${grid.chart}
+      ${grid.status}
     </div>
     <div id="shift-cache-suggestion" class="shift-suggestion-box" style="display:none;">
       <span>💡 Similar question found!</span>
@@ -88,6 +193,16 @@ function injectLiveMonitor(inputParent) {
       showCachePopup(lastCachedAnswer);
     }
   });
+
+  // Refresh grid chart every 60s so the "now" marker stays current
+  setInterval(() => {
+    const gridRow = document.getElementById('shift-grid-row');
+    if (gridRow) {
+      const updated = buildGridChartHTML();
+      gridRow.innerHTML = updated.chart + updated.status;
+      gridRow.title = updated.detail;
+    }
+  }, 60000);
 }
 
 // Gemini-style cached answer popup

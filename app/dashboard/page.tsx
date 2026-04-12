@@ -185,7 +185,7 @@ function DashboardContent() {
     // Check session
     const storedSessionId = localStorage.getItem('shift_session_id')
     if (!storedSessionId) {
-      router.replace('/onboarding')
+      window.location.href = '/onboarding'
       return
     }
     setSessionId(storedSessionId)
@@ -210,7 +210,7 @@ function DashboardContent() {
         // User not found - redirect to onboarding
         if (!demoMode.isDemoMode) {
           localStorage.removeItem('shift_session_id')
-          router.push('/onboarding')
+          window.location.href = '/onboarding'
         }
         return
       }

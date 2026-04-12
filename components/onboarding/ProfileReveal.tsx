@@ -37,14 +37,15 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
     // Verify sessionId exists in localStorage before navigating
     const sessionId = localStorage.getItem('shift_session_id')
     if (sessionId) {
-      router.push('/dashboard')
+      // Use window.location for full page load to ensure clean state
+      window.location.href = '/dashboard'
     } else {
       console.error('[ProfileReveal] Session ID not found in localStorage')
       // Retry after a brief delay in case of timing issue
       setTimeout(() => {
         const retrySessionId = localStorage.getItem('shift_session_id')
         if (retrySessionId) {
-          router.push('/dashboard')
+          window.location.href = '/dashboard'
         }
       }, 100)
     }

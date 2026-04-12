@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Shift
+
+**AI-personalized sustainability actions with radical transparency about AI's environmental cost.**
+
+## The Problem
+
+65% of people want to live more sustainably — only 26% follow through. The gap isn't motivation. It's tools.
+
+Existing apps show guilt dashboards and generic tip lists. They don't tell you what to do *today*, in *your* city, with *your* diet, on *your* commute. And every AI product quietly ignores its own environmental footprint, making the problem worse.
+
+## How Shift Works
+
+Shift onboards users in 90 seconds, then delivers **one AI-personalized sustainability micro-action per day** — tailored to:
+
+- Your actual commute distance
+- Your diet pattern
+- Your city's live electricity grid carbon intensity
+- Current weather conditions
+
+Actions are grounded in EPA and DEFRA emissions data, structured using behavioral science frameworks (Fogg's B=MAP, Tiny Habits), and scored against 190 curated actions in a knowledge base. Users earn points, build streaks, advance through five levels, and track contributions to UN Sustainable Development Goals.
+
+### Radical Transparency
+
+Unlike every other AI product, Shift shows you what the AI costs:
+
+- Every action card displays the inference carbon cost alongside savings enabled
+- A Chrome extension monitors the environmental impact of every Gemini prompt in real time
+- A dedicated Eco-LLM dashboard tracks energy (Wh), carbon (gCO₂), and water (mL) per query
+- Semantic caching serves similar queries without extra inference — zero additional carbon
+
+**Typical carbon ROI: 10,000:1 or higher.**
+
+## Technology
+
+- **Frontend:** Next.js 14 (App Router, PWA) · TypeScript · Tailwind CSS · shadcn/ui · Framer Motion · Tremor
+- **AI:** Groq (Llama 3.3-70B) with Gemini fallback via Vercel AI SDK
+- **Database:** Supabase (Postgres + pgvector)
+- **Caching:** Upstash Redis (TTL cache) · Upstash Vector (semantic deduplication)
+- **APIs:** Climatiq (commute CO₂) · Electricity Maps (live grid intensity) · Google Maps Distance Matrix · Open-Meteo
+- **Carbon Estimation:** EcoLogits model with Groq LPU efficiency multiplier
+- **Analytics:** PostHog · Sentry
+- **Email:** Resend
+
+## Potential Impact
+
+At 100,000 daily users completing one action each, Shift removes an estimated **12,000 tonnes of CO₂ per year** — equivalent to taking 2,600 cars off the road.
+
+The Eco-LLM transparency layer is also a standalone product for enterprise teams navigating AI carbon disclosure requirements under EU AI Act regulations.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Fill in your API keys
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## License
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

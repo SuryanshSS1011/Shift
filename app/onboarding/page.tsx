@@ -148,7 +148,7 @@ function OnboardingContent() {
 
     if (storedSessionId && !isRetake) {
       // User has session and didn't explicitly choose to retake - redirect to dashboard
-      router.replace('/dashboard')
+      window.location.href = '/dashboard'
       return
     }
 
@@ -328,15 +328,15 @@ function OnboardingContent() {
         // API returned error - profile not saved to database
         // Don't set localStorage - can't proceed to dashboard
         console.error('Profile generation API error:', data.error)
+        setCurrentStep(0)
         setFlowState('lifestyle')
-        // TODO: Show error toast to user
       }
     } catch (error) {
       console.error('Profile generation error:', error)
       // Network/fetch error - profile not saved to database
       // Don't set localStorage - can't proceed to dashboard
+      setCurrentStep(0)
       setFlowState('lifestyle')
-      // TODO: Show error toast to user
     }
   }
 

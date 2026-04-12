@@ -34,11 +34,11 @@ export function ActivityHeatmap({ completedDates }: ActivityHeatmapProps) {
       <h3 className="text-green-300 text-sm font-medium mb-4">
         12-Week Activity
       </h3>
-      <div className="overflow-x-auto">
+      <div className="w-full flex justify-center">
         <ActivityCalendar
           data={data}
-          blockSize={12}
-          blockMargin={3}
+          blockSize={14}
+          blockMargin={4}
           fontSize={12}
           theme={{
             light: ['#0f1a0f', '#134e13', '#22c55e', '#4ade80', '#86efac'],

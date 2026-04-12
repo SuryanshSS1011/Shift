@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Card, Metric, Text, ProgressBar } from '@tremor/react'
+import { Card, Metric, Text } from '@tremor/react'
 import { kgToEquivalencies } from '@/lib/emissions/equivalencies'
 
 interface ImpactDashboardProps {
@@ -56,17 +56,25 @@ export function ImpactDashboard({
 
       {/* Monthly Progress */}
       <Card className="!bg-[#1a2e1a] !border-green-800/30 !ring-0">
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-3">
           <Text className="!text-green-400">Monthly Goal Progress</Text>
-          <Text className="!text-green-50">{totalCo2SavedKg.toFixed(1)} / {monthlyGoal} kg</Text>
+          <Text className="!text-green-50 font-medium">
+            {totalCo2SavedKg.toFixed(1)} / {monthlyGoal} kg
+          </Text>
         </div>
-        <ProgressBar
-          value={progressPercent}
-          color="emerald"
-          className="!bg-[#0f1a0f] [&>div]:!bg-emerald-500"
-        />
+        {/* Custom Progress Bar */}
+        <div className="w-full h-3 bg-[#0f1a0f] rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-emerald-500 rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+          />
+        </div>
         <Text className="!text-green-400/70 mt-2 text-center">
-          {progressPercent >= 100 ? 'Goal achieved!' : `${(monthlyGoal - totalCo2SavedKg).toFixed(1)} kg to go`}
+          {progressPercent >= 100
+            ? 'Goal achieved!'
+            : `${(monthlyGoal - totalCo2SavedKg).toFixed(1)} kg to go`}
         </Text>
       </Card>
 

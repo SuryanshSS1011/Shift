@@ -337,10 +337,10 @@ export default function ProfilePage() {
             Back to Dashboard
           </Link>
           <Link
-            href="/onboarding"
+            href="/onboarding?retake=true"
             className="block w-full py-3 border border-green-600 text-green-400 hover:bg-green-600/10 font-medium rounded-xl transition-colors text-center"
           >
-            Update Profile
+            Retake Quiz
           </Link>
           <button
             onClick={handleResetProfile}

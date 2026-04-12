@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell'
 import { QuestionCard } from '@/components/onboarding/QuestionCard'
@@ -75,24 +76,43 @@ type ProfileResponse = {
   aiProfileSummary: string
 }
 
-type FlowState = 'questions' | 'address' | 'loading' | 'profile'
+type FlowState = 'checking' | 'questions' | 'address' | 'loading' | 'profile'
 
-export default function OnboardingPage() {
+function OnboardingContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const isRetake = searchParams.get('retake') === 'true'
+
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({})
-  const [flowState, setFlowState] = useState<FlowState>('questions')
+  const [flowState, setFlowState] = useState<FlowState>('checking')
   const [profile, setProfile] = useState<ProfileResponse | null>(null)
   const [sessionId, setSessionId] = useState<string>('')
 
-  // Initialize or get session ID
+  // Check if user already has a profile and handle accordingly
   useEffect(() => {
-    let storedSessionId = localStorage.getItem('shift_session_id')
-    if (!storedSessionId) {
-      storedSessionId = crypto.randomUUID()
-      localStorage.setItem('shift_session_id', storedSessionId)
+    const storedSessionId = localStorage.getItem('shift_session_id')
+
+    if (storedSessionId && !isRetake) {
+      // User has session and didn't explicitly choose to retake - redirect to dashboard
+      router.replace('/dashboard')
+      return
     }
-    setSessionId(storedSessionId)
-  }, [])
+
+    if (isRetake && storedSessionId) {
+      // User is retaking - create new session ID (old profile will be replaced)
+      const newSessionId = crypto.randomUUID()
+      localStorage.setItem('shift_session_id', newSessionId)
+      setSessionId(newSessionId)
+    } else {
+      // New user - create session ID
+      const newSessionId = crypto.randomUUID()
+      localStorage.setItem('shift_session_id', newSessionId)
+      setSessionId(newSessionId)
+    }
+
+    setFlowState('questions')
+  }, [router, isRetake])
 
   // Handle back navigation
   const handleBack = useCallback(() => {
@@ -185,7 +205,19 @@ export default function OnboardingPage() {
   // Total steps: 5 questions + 1 address = 6
   const totalSteps = 6
 
-  // Loading state
+  // Checking state (redirecting or initializing)
+  if (flowState === 'checking') {
+    return (
+      <div className="min-h-screen bg-[#0f1a0f] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-green-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Loading state (generating profile)
   if (flowState === 'loading') {
     return (
       <OnboardingShell>
@@ -229,5 +261,23 @@ export default function OnboardingPage() {
         />
       </AnimatePresence>
     </OnboardingShell>
+  )
+}
+
+// Wrap in Suspense for useSearchParams
+export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0f1a0f] flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-green-400">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   )
 }

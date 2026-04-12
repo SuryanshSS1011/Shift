@@ -91,10 +91,10 @@ export default function Home() {
             )}
             {hasSession ? (
               <Link
-                href="/onboarding"
+                href="/onboarding?retake=true"
                 className="inline-flex items-center justify-center px-8 py-4 border border-green-600 text-green-400 hover:bg-green-600/10 font-semibold rounded-xl transition-colors text-lg"
               >
-                Start Fresh
+                Retake Quiz
               </Link>
             ) : (
               <Link

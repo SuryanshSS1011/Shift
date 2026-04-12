@@ -62,7 +62,7 @@ export function Header({ showBackButton, onBack, showMenu = false, isDemoMode = 
           ) : null}
 
           <Link href={hasSession ? "/dashboard" : "/"} className="flex items-center group hover:opacity-90 transition-opacity">
-            <Logo variant="reversed-dark" size="sm" />
+            <Logo variant="full" size="sm" />
           </Link>
 
           {isDemoMode && (

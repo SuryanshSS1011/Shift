@@ -55,7 +55,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <div className="mx-auto mb-6">
-              <Logo variant="reversed-dark" size="lg" />
+              <Logo variant="full" size="lg" />
             </div>
             <p className="text-xl md:text-2xl text-green-300 mb-2">
               One tiny action. One day at a time.
@@ -228,7 +228,7 @@ export default function Home() {
       <footer className="px-4 py-8 border-t border-green-800/30">
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex items-center justify-center mb-4">
-            <Logo variant="reversed-dark" size="sm" />
+            <Logo variant="full" size="sm" />
           </div>
           <p className="text-green-400 text-sm">
             Making sustainability accessible, one micro-action at a time.

@@ -64,5 +64,9 @@ npm run dev
 ## License
 
 MIT
-v0.1.0 planned and built in 12 hours for the GDG @ Penn State Solution Challenge Hackathon.
+
+## Background
+
+Shift v0.1.0 was engineered in 12 hours for the GDG @ Penn State Solution Challenge to solve a critical irony: using AI to save the planet while ignoring its energy cost. It balances personalized climate action with full LLM-usage transparency.
+
 Team: [Suryansh Sijwali](https://github.com/SuryanshSS1011), [Nabeel Ahmed](https://github.com/NabeelAhmed1721), and [Neil Barbara](https://github.com/abb6640).

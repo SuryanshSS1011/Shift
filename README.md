@@ -64,3 +64,5 @@ npm run dev
 ## License
 
 MIT
+v0.1.0 planned and built in 12 hours for the GDG @ Penn State Solution Challenge Hackathon
+Team: [Suryansh Sijwali](https://github.com/SuryanshSS1011), [Nabeel Ahmed](https://github.com/NabeelAhmed1721), [Neil Barbara](https://github.com/abb6640)

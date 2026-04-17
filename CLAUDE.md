@@ -178,7 +178,7 @@ interface OnboardingAnswers {
   goalDuration: 7 | 14 | 21 | 30
   actionFrequency: 'hourly' | 'multiple_daily' | 'daily' | 'every_other_day' | 'twice_weekly'
   preferredTime: 'morning' | 'afternoon' | 'evening'
-  difficultyPreference: 'easy' | 'moderate' | 'challenge'
+  difficultyPreference: 'start_easy' | 'moderate' | 'challenge_me'
   focusAreas: ActionCategory[]
 }
 

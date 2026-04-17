@@ -11,7 +11,8 @@ import { ActionFrequencyCard } from '@/components/onboarding/ActionFrequencyCard
 import { AddressCapture } from '@/components/onboarding/AddressCapture'
 import { LoadingScreen } from '@/components/onboarding/LoadingScreen'
 import { ProfileReveal } from '@/components/onboarding/ProfileReveal'
-import type { OnboardingAnswers, GoalDuration } from '@/types/user'
+import type { OnboardingAnswers, GoalDuration, ActionFrequency } from '@/types/user'
+import { toast } from 'sonner'
 import type { ActionCategory } from '@/types/action'
 
 // Lifestyle questions (steps 1-5)
@@ -112,7 +113,7 @@ type ProfileResponse = {
   topImpactAreas: string[]
   estimatedAnnualFootprintKg: number
   aiProfileSummary: string
-  actionFrequency?: number // Hours between actions (1-24)
+  actionFrequency?: ActionFrequency
 }
 
 // Flow states for different sections
@@ -241,8 +242,8 @@ function OnboardingContent() {
   }
 
   // Handle action frequency selection (step 7)
-  const handleActionFrequencySelect = (hours: number) => {
-    setAnswers({ ...answers, actionFrequency: hours })
+  const handleActionFrequencySelect = (frequency: ActionFrequency) => {
+    setAnswers({ ...answers, actionFrequency: frequency })
     setCurrentStep(0) // Reset for goals section
     setFlowState('goals')
   }
@@ -328,6 +329,7 @@ function OnboardingContent() {
         // API returned error - profile not saved to database
         // Don't set localStorage - can't proceed to dashboard
         console.error('Profile generation API error:', data.error)
+        toast.error('We couldn\'t save your profile. Please try again.')
         setCurrentStep(0)
         setFlowState('lifestyle')
       }
@@ -335,6 +337,7 @@ function OnboardingContent() {
       console.error('Profile generation error:', error)
       // Network/fetch error - profile not saved to database
       // Don't set localStorage - can't proceed to dashboard
+      toast.error('Please check your internet connection and try again.')
       setCurrentStep(0)
       setFlowState('lifestyle')
     }

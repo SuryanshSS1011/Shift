@@ -1,4 +1,5 @@
 import type { DifficultyLevel } from '@/types/action'
+import type { ActionFrequency } from '@/types/user'
 
 // Level definitions
 export type LevelName = 'Seedling' | 'Sprout' | 'Sapling' | 'Tree' | 'Forest'
@@ -27,19 +28,17 @@ const DIFFICULTY_MULTIPLIER: Record<DifficultyLevel, number> = {
 }
 
 // Frequency multipliers (based on user's actionFrequency setting)
-// actionFrequency is stored as hours between actions (1-24)
-export function getFrequencyMultiplier(frequencyHours: number): number {
-  // Map frequency hours to multiplier
-  // 1 hour = 3.0x (hourly)
-  // 4-6 hours = 2.0x (multiple daily)
-  // 24 hours = 1.0x (daily)
-  // 48 hours = 0.8x (every other day)
-  // 72-84 hours = 0.6x (twice weekly)
-  if (frequencyHours <= 1) return 3.0
-  if (frequencyHours <= 6) return 2.0
-  if (frequencyHours <= 24) return 1.0
-  if (frequencyHours <= 48) return 0.8
-  return 0.6
+const FREQUENCY_MULTIPLIER: Record<ActionFrequency, number> = {
+  hourly: 3.0,
+  multiple_daily: 2.0,
+  daily: 1.0,
+  every_other_day: 0.8,
+  twice_weekly: 0.6,
+}
+
+// Get frequency multiplier from categorical frequency
+export function getFrequencyMultiplier(frequency: ActionFrequency): number {
+  return FREQUENCY_MULTIPLIER[frequency] || 1.0
 }
 
 /**
@@ -52,10 +51,10 @@ export function computePoints(
   co2SavingsKg: number,
   dollarSavings: number,
   difficulty: DifficultyLevel,
-  frequencyHours: number = 24
+  frequency: ActionFrequency = 'daily'
 ): number {
   const difficultyMultiplier = DIFFICULTY_MULTIPLIER[difficulty] || 1.0
-  const frequencyMultiplier = getFrequencyMultiplier(frequencyHours)
+  const frequencyMultiplier = getFrequencyMultiplier(frequency)
 
   const basePoints = co2SavingsKg * 10 + dollarSavings * 2
   return Math.round(basePoints * difficultyMultiplier * frequencyMultiplier)

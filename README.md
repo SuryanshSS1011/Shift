@@ -61,6 +61,12 @@ cp .env.example .env.local
 npm run dev
 ```
 
+## Post-Hackathon Updates
+
+Updates made after the initial hackathon submission:
+
+- **2026-04-17**: Fixed actionFrequency type mismatch (numeric → categorical), added missing API response fields, improved dashboard data fetching, added error toasts to onboarding, removed unnecessary retry logic
+
 ## License
 
 MIT

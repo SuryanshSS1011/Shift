@@ -10,8 +10,17 @@ import { getWeather } from '@/lib/open-meteo'
 import { getGridIntensity } from '@/lib/electricity-maps'
 import { computePoints } from '@/lib/points'
 import { estimateCarbon } from '@/lib/carbon-estimation'
-import type { UserProfile } from '@/types/user'
+import type { UserProfile, ActionFrequency } from '@/types/user'
 import type { ActionCategory } from '@/types/action'
+
+// Map categorical frequency to hours for cutoff calculation
+const FREQUENCY_TO_HOURS: Record<ActionFrequency, number> = {
+  hourly: 1,
+  multiple_daily: 6,
+  daily: 24,
+  every_other_day: 48,
+  twice_weekly: 84,
+}
 
 // Default SDG tags by category (used when action-library entry doesn't have sdgTags)
 function getDefaultSDGsForCategory(category: string): number[] {
@@ -52,8 +61,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's action frequency preference (hours between actions, 1-24)
-    const frequencyHours = typeof user.action_frequency === 'number' ? user.action_frequency : 24
+    // Get user's action frequency preference (categorical: 'hourly', 'daily', etc.)
+    const actionFrequency: ActionFrequency = (user.action_frequency as ActionFrequency) || 'daily'
+    const frequencyHours = FREQUENCY_TO_HOURS[actionFrequency] || 24
 
     // Calculate the cutoff time based on frequency
     const now = new Date()
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest) {
           actionDate: existingAction.action_date,
         },
         isExisting: true,
-        frequencyHours,
+        actionFrequency,
       })
     }
 
@@ -157,7 +167,7 @@ export async function POST(request: NextRequest) {
       goalDuration: user.goal_duration || 14,
       goalStartDate: user.goal_start_date || new Date().toISOString().split('T')[0],
       goalEndDate: user.goal_end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      actionFrequency: user.action_frequency || 24,
+      actionFrequency: actionFrequency,
       preferredTime: user.preferred_time || 'morning',
       difficultyPreference: user.difficulty_preference || 'start_easy',
       focusAreas: (user.focus_areas || ['food', 'energy', 'transport']) as ActionCategory[],
@@ -285,7 +295,7 @@ export async function POST(request: NextRequest) {
       actionOutput.co2SavingsKg,
       actionOutput.dollarSavings,
       actionOutput.difficultyLevel,
-      frequencyHours
+      actionFrequency
     )
 
     // Get SDG tags from the candidate (fallback to category defaults)
@@ -344,7 +354,7 @@ export async function POST(request: NextRequest) {
         actionDate: newAction.action_date,
       },
       isExisting: false,
-      frequencyHours,
+      actionFrequency,
       context: {
         weather: weatherData,
         gridRenewablePercent: gridData?.renewablePercent,

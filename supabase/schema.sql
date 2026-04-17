@@ -23,6 +23,17 @@ create table users (
   car_co2_kg_per_trip numeric,
   transit_co2_kg_per_trip numeric,
   daily_savings_if_switched numeric,
+  -- Goal-setting fields
+  goal_duration integer default 30,
+  goal_start_date date,
+  goal_end_date date,
+  action_frequency text default 'daily',
+  preferred_time text default 'morning',
+  difficulty_preference text default 'moderate',
+  focus_areas text[] default '{}',
+  -- Additional fields
+  weekly_report_cache text,
+  push_subscription jsonb,
   created_at timestamptz default now()
 );
 
@@ -47,6 +58,11 @@ create table actions (
   difficulty_level text,
   behavioral_frame text,
   equivalency_label text,
+  -- SDG and points tracking
+  sdg_tags integer[] default '{}',
+  points integer default 0,
+  ai_cost_co2_grams numeric default 0,
+  -- Completion tracking
   completed boolean default false,
   completed_at timestamptz,
   created_at timestamptz default now(),
@@ -78,8 +94,45 @@ create table impact_totals (
   user_id uuid references users(id) on delete cascade unique,
   total_co2_saved_kg numeric default 0,
   total_dollar_saved numeric default 0,
-  total_actions_completed integer default 0
+  total_actions_completed integer default 0,
+  total_points integer default 0
 );
+
+-- ============================================
+-- TABLE: category_streaks
+-- Per-category streak tracking
+-- ============================================
+create table category_streaks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  category text not null,
+  current_streak integer default 0,
+  longest_streak integer default 0,
+  last_action_date date,
+  unique(user_id, category)
+);
+
+-- ============================================
+-- TABLE: eco_llm_calls
+-- Eco-LLM call tracking for environmental impact dashboard
+-- ============================================
+create table eco_llm_calls (
+  id uuid primary key default gen_random_uuid(),
+  session_id text not null,
+  model text not null,
+  input_tokens integer default 0,
+  output_tokens integer default 0,
+  energy_wh numeric default 0,
+  co2_grams numeric default 0,
+  water_ml numeric default 0,
+  was_cache_hit boolean default false,
+  co2_saved numeric default 0,
+  source text default 'other',
+  created_at timestamptz default now()
+);
+
+create index idx_eco_llm_calls_session on eco_llm_calls(session_id);
+create index idx_eco_llm_calls_source on eco_llm_calls(source);
 
 -- ============================================
 -- FUNCTION: update_streak
@@ -140,6 +193,8 @@ alter table users enable row level security;
 alter table actions enable row level security;
 alter table streaks enable row level security;
 alter table impact_totals enable row level security;
+alter table category_streaks enable row level security;
+alter table eco_llm_calls enable row level security;
 
 -- Allow all operations for now (MVP - no auth)
 -- In production, replace with proper user-based policies
@@ -147,3 +202,5 @@ create policy "Allow all for users" on users for all using (true);
 create policy "Allow all for actions" on actions for all using (true);
 create policy "Allow all for streaks" on streaks for all using (true);
 create policy "Allow all for impact_totals" on impact_totals for all using (true);
+create policy "Allow all for category_streaks" on category_streaks for all using (true);
+create policy "Allow all for eco_llm_calls" on eco_llm_calls for all using (true);

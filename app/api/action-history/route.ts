@@ -59,17 +59,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Transform to camelCase
+    // Transform to camelCase with all required fields
     const transformedActions = (actions || []).map((action) => ({
       id: action.id,
+      userId: action.user_id,
       actionDate: action.action_date,
       category: action.category,
       title: action.title,
       description: action.description,
+      anchorHabit: action.anchor_habit || '',
       co2SavingsKg: action.co2_savings_kg,
       dollarSavings: action.dollar_savings,
       timeRequiredMinutes: action.time_required_minutes,
       difficultyLevel: action.difficulty_level,
+      behavioralFrame: action.behavioral_frame || '',
+      equivalencyLabel: action.equivalency_label || '',
+      sdgTags: action.sdg_tags || [],
+      points: action.points || 0,
+      aiCostCo2Grams: action.ai_cost_co2_grams || 0,
       completed: action.completed,
       completedAt: action.completed_at,
       createdAt: action.created_at,

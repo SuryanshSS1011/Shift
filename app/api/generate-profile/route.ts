@@ -24,7 +24,7 @@ const InputSchema = z.object({
     primaryMotivation: z.enum(['planet', 'money', 'health', 'community']),
     // Goal-setting questions
     goalDuration: z.union([z.literal(7), z.literal(14), z.literal(21), z.literal(30)]),
-    actionFrequency: z.number().min(1).max(24),
+    actionFrequency: z.enum(['hourly', 'multiple_daily', 'daily', 'every_other_day', 'twice_weekly']),
     preferredTime: z.enum(['morning', 'afternoon', 'evening']),
     difficultyPreference: z.enum(['start_easy', 'moderate', 'challenge_me']),
     focusAreas: z.array(z.enum(['food', 'transport', 'energy', 'shopping', 'water', 'waste'])).min(2).max(3),

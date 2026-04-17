@@ -1,7 +1,7 @@
 import type { ActionCategory } from './action'
 
 export type GoalDuration = 7 | 14 | 21 | 30
-export type ActionFrequency = number // Hours between actions (1-24)
+export type ActionFrequency = 'hourly' | 'multiple_daily' | 'daily' | 'every_other_day' | 'twice_weekly'
 export type PreferredTime = 'morning' | 'afternoon' | 'evening'
 export type DifficultyPreference = 'start_easy' | 'moderate' | 'challenge_me'
 

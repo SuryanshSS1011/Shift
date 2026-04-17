@@ -20,7 +20,7 @@ import { useDemoMode } from '@/lib/hooks/useDemoMode'
 import type { GridForecastResponse } from '@/types/grid'
 import type { CategoryStreak } from '@/types/impact'
 import type { MicroAction } from '@/types/action'
-import type { LevelName } from '@/lib/points'
+import { computeLevel, type LevelName } from '@/lib/points'
 
 interface Action {
   id: string
@@ -279,13 +279,84 @@ function DashboardContent() {
     }
   }, [sessionId, demoMode.isDemoMode])
 
+  // Fetch user profile with goal data
+  const fetchProfile = useCallback(async () => {
+    if (!sessionId || demoMode.isDemoMode) return
+
+    try {
+      const response = await fetch('/api/get-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        const totalPoints = result.data.stats.totalPoints || 0
+        const levelInfo = computeLevel(totalPoints)
+        setData((prev) => ({
+          ...prev,
+          streak: {
+            current: result.data.stats.currentStreak,
+            longest: result.data.stats.longestStreak,
+          },
+          totals: {
+            totalCo2SavedKg: result.data.stats.totalCo2SavedKg,
+            totalDollarSaved: result.data.stats.totalDollarSaved,
+            totalActionsCompleted: result.data.stats.totalActionsCompleted,
+            totalPoints,
+            level: levelInfo.level,
+            levelEmoji: levelInfo.emoji,
+          },
+          goalDuration: result.data.profile.goalDuration || 14,
+          goalStartDate: result.data.profile.goalStartDate || new Date().toISOString().split('T')[0],
+        }))
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err)
+    }
+  }, [sessionId, demoMode.isDemoMode])
+
+  // Fetch recent actions for impact projection
+  const fetchRecentActions = useCallback(async () => {
+    if (!sessionId || demoMode.isDemoMode) return
+
+    try {
+      const response = await fetch('/api/action-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, limit: 14 }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Build completedDates from action history
+        const completedDates = result.data.actions
+          .filter((a: MicroAction) => a.completed)
+          .map((a: MicroAction) => a.actionDate)
+
+        setData((prev) => ({
+          ...prev,
+          recentActions: result.data.actions,
+          completedDates,
+        }))
+      }
+    } catch (err) {
+      console.error('Error fetching recent actions:', err)
+    }
+  }, [sessionId, demoMode.isDemoMode])
+
   useEffect(() => {
     if (sessionId) {
       fetchAction()
       fetchGrid()
       fetchGridForecast()
+      fetchProfile()
+      fetchRecentActions()
     }
-  }, [sessionId, fetchAction, fetchGrid, fetchGridForecast])
+  }, [sessionId, fetchAction, fetchGrid, fetchGridForecast, fetchProfile, fetchRecentActions])
 
   // Complete action
   const handleComplete = async () => {

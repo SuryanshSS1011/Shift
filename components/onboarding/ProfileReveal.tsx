@@ -1,24 +1,28 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import { formatCO2 } from '@/lib/emissions/calculator'
+import type { ActionFrequency } from '@/types/user'
 
 interface ProfileRevealProps {
   profile: {
     topImpactAreas: string[]
     estimatedAnnualFootprintKg: number
     aiProfileSummary: string
-    actionFrequency?: number // Hours between actions (1-24)
+    actionFrequency?: ActionFrequency
   }
 }
 
-function getFrequencyLabel(hours: number): string {
-  if (hours === 1) return 'One personalized micro-action every hour'
-  if (hours === 24) return 'One personalized micro-action per day'
-  const actionsPerDay = Math.floor(24 / hours)
-  if (actionsPerDay === 1) return 'One personalized micro-action per day'
-  return `~${actionsPerDay} personalized micro-actions per day`
+const FREQUENCY_LABELS: Record<ActionFrequency, string> = {
+  hourly: 'A personalized micro-action every hour',
+  multiple_daily: '3-4 personalized micro-actions per day',
+  daily: 'One personalized micro-action per day',
+  every_other_day: 'A personalized micro-action every other day',
+  twice_weekly: 'Two personalized micro-actions per week',
+}
+
+function getFrequencyLabel(frequency: ActionFrequency): string {
+  return FREQUENCY_LABELS[frequency] || 'One personalized micro-action per day'
 }
 
 const categoryLabels: Record<string, { label: string; abbr: string; color: string }> = {
@@ -31,8 +35,6 @@ const categoryLabels: Record<string, { label: string; abbr: string; color: strin
 }
 
 export function ProfileReveal({ profile }: ProfileRevealProps) {
-  const router = useRouter()
-
   const handleStart = () => {
     // Verify sessionId exists in localStorage before navigating
     const sessionId = localStorage.getItem('shift_session_id')
@@ -40,14 +42,8 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
       // Use window.location for full page load to ensure clean state
       window.location.href = '/dashboard'
     } else {
+      // Session should always exist at this point since onboarding sets it before showing ProfileReveal
       console.error('[ProfileReveal] Session ID not found in localStorage')
-      // Retry after a brief delay in case of timing issue
-      setTimeout(() => {
-        const retrySessionId = localStorage.getItem('shift_session_id')
-        if (retrySessionId) {
-          window.location.href = '/dashboard'
-        }
-      }, 100)
     }
   }
 
@@ -184,7 +180,7 @@ export function ProfileReveal({ profile }: ProfileRevealProps) {
         transition={{ delay: 1.2 }}
         className="text-center text-green-400 text-sm mt-4"
       >
-        {getFrequencyLabel(profile.actionFrequency || 24)}
+        {getFrequencyLabel(profile.actionFrequency || 'daily')}
       </motion.p>
     </motion.div>
   )

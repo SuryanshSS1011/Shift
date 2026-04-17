@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     // Get impact totals
     const { data: totals } = await supabase
       .from('impact_totals')
-      .select('total_co2_saved_kg, total_dollar_saved, total_actions_completed')
+      .select('total_co2_saved_kg, total_dollar_saved, total_actions_completed, total_points')
       .eq('user_id', user.id)
       .single()
 
@@ -65,6 +65,19 @@ export async function POST(request: NextRequest) {
           topImpactAreas: user.top_impact_areas,
           estimatedAnnualFootprintKg: user.estimated_annual_footprint_kg,
           electricityZone: user.electricity_zone,
+          // Goal-setting fields
+          goalDuration: user.goal_duration,
+          goalStartDate: user.goal_start_date,
+          goalEndDate: user.goal_end_date,
+          actionFrequency: user.action_frequency,
+          preferredTime: user.preferred_time,
+          difficultyPreference: user.difficulty_preference,
+          focusAreas: user.focus_areas,
+          // Location data
+          lat: user.lat,
+          lng: user.lng,
+          carCo2KgPerTrip: user.car_co2_kg_per_trip,
+          transitCo2KgPerTrip: user.transit_co2_kg_per_trip,
           createdAt: user.created_at,
         },
         stats: {
@@ -73,6 +86,7 @@ export async function POST(request: NextRequest) {
           totalCo2SavedKg: totals?.total_co2_saved_kg || 0,
           totalDollarSaved: totals?.total_dollar_saved || 0,
           totalActionsCompleted: totals?.total_actions_completed || 0,
+          totalPoints: totals?.total_points || 0,
           actionsThisWeek: actionsThisWeek || 0,
         },
       },

@@ -9,11 +9,11 @@ const ECOLOGITS_API_URL = "https://api.ecologits.ai/v1beta/estimations";
 
 // Config loaded from chrome.storage.sync (no hardcoded credentials)
 let config = {
-  UPSTASH_VECTOR_URL: "",
-  UPSTASH_VECTOR_TOKEN: "",
-  SHIFT_API_URL: "https://useshift.vercel.app" // Default to production
+  UPSTASH_VECTOR_URL: "...",
+  UPSTASH_VECTOR_TOKEN: "...",
+  SHIFT_API_URL: "https://useshift.vercel.app",
+  GROQ_API_KEY: ""
 };
-
 // Average environmental impact per LLM query (from EcoLogits data)
 const AVG_IMPACT_PER_QUERY = {
   energyWh: 0.5,
@@ -22,10 +22,11 @@ const AVG_IMPACT_PER_QUERY = {
 };
 
 // Load config on startup
-chrome.storage.sync.get(["UPSTASH_VECTOR_URL", "UPSTASH_VECTOR_TOKEN", "SHIFT_API_URL"], (result) => {
+chrome.storage.sync.get(["UPSTASH_VECTOR_URL", "UPSTASH_VECTOR_TOKEN", "SHIFT_API_URL", "GROQ_API_KEY"], (result) => {
   if (result.UPSTASH_VECTOR_URL) config.UPSTASH_VECTOR_URL = result.UPSTASH_VECTOR_URL;
   if (result.UPSTASH_VECTOR_TOKEN) config.UPSTASH_VECTOR_TOKEN = result.UPSTASH_VECTOR_TOKEN;
   if (result.SHIFT_API_URL) config.SHIFT_API_URL = result.SHIFT_API_URL;
+  if (result.GROQ_API_KEY) config.GROQ_API_KEY = result.GROQ_API_KEY;
   console.log("🔧 Shift: Config loaded", config.UPSTASH_VECTOR_URL ? "✓" : "⚠️ Missing URL");
 });
 
@@ -35,9 +36,12 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     if (changes.UPSTASH_VECTOR_URL) config.UPSTASH_VECTOR_URL = changes.UPSTASH_VECTOR_URL.newValue;
     if (changes.UPSTASH_VECTOR_TOKEN) config.UPSTASH_VECTOR_TOKEN = changes.UPSTASH_VECTOR_TOKEN.newValue;
     if (changes.SHIFT_API_URL) config.SHIFT_API_URL = changes.SHIFT_API_URL.newValue;
+    if (changes.GROQ_API_KEY) config.GROQ_API_KEY = changes.GROQ_API_KEY.newValue;
     console.log("🔧 Shift: Config updated");
   }
 });
+
+//added groq to config
 
 // Track events to the Shift web app
 async function trackEvent(event, impacts = null) {
@@ -109,6 +113,58 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true;
   }
+
+  if (request.type === "COMPRESS_PROMPT") {// added request feature for compressing prompts using groq since the summarization it uses does not cost that mcuh according to research
+  const { prompt } = request.payload;
+  console.log("🗜️ Shift: COMPRESS_PROMPT received, Groq key present:", !!config.GROQ_API_KEY);
+
+    if (!config.GROQ_API_KEY) {
+      sendResponse({ success: false, error: "Groq API key not configured" });
+      return true;
+    }
+
+    fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${config.GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+
+        messages: [
+          {
+            role: "system",
+            content: "You are a prompt compression assistant. Rewrite the user's prompt to be shorter, CONCISE, and more efficient while preserving the full meaning. Remove filler words, redundant phrases, and unnecessary politeness. Return ONLY the compressed prompt, nothing else."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.1
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+    console.log("🤖 Shift: Groq response", JSON.stringify(data).substring(0, 200));
+      const compressed = data.choices?.[0]?.message?.content?.trim() || prompt;
+      const originalTokens = Math.ceil(prompt.length / 4);
+      const compressedTokens = Math.ceil(compressed.length / 4);
+      const tokensSaved = originalTokens - compressedTokens;
+      const cloudWhSaved = (tokensSaved / 1000) * 0.3;
+      const groqWhUsed = 0.001; // Groq LPU is ~10x more efficient than GPU
+
+      sendResponse({ success: true, compressed, originalTokens, compressedTokens, tokensSaved, localWhUsed: groqWhUsed, cloudWhSaved });
+    })
+    .catch(err => {
+    console.error("❌ Shift: Groq fetch error", err.message);
+    sendResponse({ success: false, error: err.message });
+    });
+
+    return true;
+  }
 });
 
 // Semantic Cache via Upstash Vector
@@ -140,7 +196,7 @@ async function checkVectorDB(prompt) {
     console.log("🔍 Shift: Upstash query-data result", JSON.stringify(result).substring(0, 300));
     
     // Semantic threshold (0.9 as defined in api.md)
-    if (result.result && result.result.length > 0 && result.result[0].score > 0.9) {
+    if (result.result && result.result.length > 0 && result.result[0].score > 0.90) {
       console.log("✅ Shift: Cache HIT (score:", result.result[0].score, ")");
       // Track cache hit with environmental savings
       trackEvent('cache_hit', AVG_IMPACT_PER_QUERY);

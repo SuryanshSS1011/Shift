@@ -11,7 +11,7 @@ let lastCachedAnswer = null;
 // Map Gemini UI labels to EcoLogits model names
 const MODEL_MAPPING = {
   "Fast": "gemini-3-flash-preview",
-  "Thinking": "gemini-3-flash-preview", // Placeholder for thinking mode
+  "Thinking": "gemini-3-flash-preview",
   "Pro": "gemini-3.1-pro-preview"
 };
 
@@ -25,19 +25,16 @@ function detectGeminiModel() {
     if (text.includes("Thinking")) return "Thinking";
     if (text.includes("Pro")) return "Pro";
   }
-  return "Fast"; // Default fallback
+  return "Fast";
 }
 
-// Helper: Estimate tokens based on characters (Gemini heuristic: ~4 chars per token)
 function estimateTokens(text) {
   if (!text) return 0;
-  // Strip whitespace and non-printable characters for a cleaner "empty" check
   const cleaned = text.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
   if (cleaned.length === 0) return 0;
   return Math.ceil(cleaned.length / 4);
 }
 
-// Helper to format min/max ranges with auto-scaling units
 function formatRangeDisplay(metric, type) {
   if (!metric || !metric.value) return "0.000";
   
@@ -45,7 +42,6 @@ function formatRangeDisplay(metric, type) {
   let max = metric.value.max;
   let unit = metric.unit;
 
-  // Auto-scaling logic
   if (type === 'energy' && unit === 'kWh' && max < 1) {
     min *= 1000; max *= 1000; unit = 'Wh';
     if (max < 1) { min *= 1000; max *= 1000; unit = 'mWh'; }
@@ -60,15 +56,6 @@ function formatRangeDisplay(metric, type) {
   return `${formatNum(min)} – ${formatNum(max)} ${unit}`;
 }
 
-// ── Grid Intensity Forecast (heuristic-based) ──
-// Google's Gemini serves from US data centers (Iowa, Oregon, S. Carolina).
-// Without direct Electricity Maps access from a content script, we use
-// time-based heuristics that mirror typical US grid carbon patterns:
-//   Solar peak (10 AM–3 PM)  → low carbon    (green)
-//   Morning/afternoon ramp   → moderate       (yellow)
-//   Evening demand peak      → high carbon    (red)
-//   Overnight baseload       → moderate       (yellow)
-
 function generateGridForecast() {
   const now = new Date();
   const forecast = [];
@@ -80,20 +67,19 @@ function generateGridForecast() {
 
     let intensity;
     if (hour >= 10 && hour <= 15) {
-      intensity = 130 + Math.sin((hour - 10) * Math.PI / 5) * 40;  // valley
+      intensity = 130 + Math.sin((hour - 10) * Math.PI / 5) * 40;
     } else if (hour >= 6 && hour < 10) {
-      intensity = 250 - (hour - 6) * 25;  // ramp down toward solar
+      intensity = 250 - (hour - 6) * 25;
     } else if (hour > 15 && hour < 17) {
-      intensity = 180 + (hour - 15) * 50;  // ramp up from solar
+      intensity = 180 + (hour - 15) * 50;
     } else if (hour >= 17 && hour <= 21) {
-      intensity = 340 + Math.sin((hour - 17) * Math.PI / 4) * 80;  // peak
+      intensity = 340 + Math.sin((hour - 17) * Math.PI / 4) * 80;
     } else if (hour > 21) {
-      intensity = 320 - (hour - 21) * 25;  // post-peak decline
+      intensity = 320 - (hour - 21) * 25;
     } else {
-      intensity = 240 - hour * 5;  // overnight slow decline
+      intensity = 240 - hour * 5;
     }
 
-    // Add slight deterministic variation per-hour so bars aren't perfectly smooth
     intensity += ((hour * 7 + dt.getDate() * 3) % 20) - 10;
 
     forecast.push({
@@ -131,7 +117,6 @@ function buildGridChartHTML() {
   const currentEntry = forecast.find(f => f.isCurrent) || forecast[12];
   const currentLevel = getIntensityLevel(currentEntry.intensity);
   const status = getGridStatusText(currentLevel);
-
   const maxIntensity = Math.max(...forecast.map(f => f.intensity));
 
   const bars = forecast.map(f => {
@@ -159,7 +144,6 @@ function buildGridChartHTML() {
   };
 }
 
-// ── Inject the live monitor UI (above the input area) ──
 function injectLiveMonitor(inputParent) {
   if (document.getElementById('shift-live-monitor')) return;
 
@@ -185,7 +169,6 @@ function injectLiveMonitor(inputParent) {
     </div>
   `;
 
-  // Prepend to parent to show above input
   inputParent.insertBefore(monitor, inputParent.firstChild);
 
   document.getElementById('shift-use-cache').addEventListener('click', () => {
@@ -194,7 +177,6 @@ function injectLiveMonitor(inputParent) {
     }
   });
 
-  // Refresh grid chart every 60s so the "now" marker stays current
   setInterval(() => {
     const gridRow = document.getElementById('shift-grid-row');
     if (gridRow) {
@@ -205,9 +187,7 @@ function injectLiveMonitor(inputParent) {
   }, 60000);
 }
 
-// Gemini-style cached answer popup
 function showCachePopup(answer) {
-  // Remove existing popup if present
   const existing = document.getElementById('shift-cache-popup');
   if (existing) existing.remove();
 
@@ -266,12 +246,10 @@ function showCachePopup(answer) {
   `;
   document.body.appendChild(overlay);
 
-  // Trigger entrance animation on next frame
   requestAnimationFrame(() => {
     overlay.classList.add('shift-popup-visible');
   });
 
-  // Close handlers
   const closePopup = () => {
     overlay.classList.remove('shift-popup-visible');
     overlay.classList.add('shift-popup-closing');
@@ -281,7 +259,6 @@ function showCachePopup(answer) {
   document.getElementById('shift-popup-close').addEventListener('click', closePopup);
   overlay.querySelector('.shift-popup-backdrop').addEventListener('click', closePopup);
 
-  // Copy button
   document.getElementById('shift-popup-copy').addEventListener('click', () => {
     navigator.clipboard.writeText(answer).then(() => {
       const btn = document.getElementById('shift-popup-copy');
@@ -305,7 +282,6 @@ function showCachePopup(answer) {
     });
   });
 
-  // Escape key
   const escHandler = (e) => {
     if (e.key === 'Escape') { closePopup(); document.removeEventListener('keydown', escHandler); }
   };
@@ -313,14 +289,11 @@ function showCachePopup(answer) {
 }
 
 function formatCachedAnswer(text) {
-  // Convert markdown-ish text to light HTML
   return text
     .split('\n')
     .map(line => {
       if (!line.trim()) return '';
-      // Bold
       line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Inline code
       line = line.replace(/`([^`]+)`/g, '<code>$1</code>');
       return `<p>${line}</p>`;
     })
@@ -336,7 +309,41 @@ function formatEnergySaved() {
   return 'some';
 }
 
-// Update the live monitor with current stats
+function showOptimizedNotice(tokensSaved, localWh, cloudWh) {
+  const existing = document.getElementById('shift-optimized-notice');
+  if (existing) existing.remove();
+
+  const notice = document.createElement('div');
+  notice.id = 'shift-optimized-notice';
+  notice.style.cssText = `
+    font-size: 11px;
+    color: #2e7d32;
+    padding: 3px 8px;
+    background: #f0f9f0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+  `;
+  notice.innerHTML = `
+    ✨ Optimized −${tokensSaved} tokens · 
+    <span style="color:#888; font-size:10px;">
+      ${(localWh * 1000).toFixed(1)}mWh used · 
+      ~${(cloudWh * 1000).toFixed(2)}mWh saved
+    </span>
+  `;
+
+  const metricsBar = document.querySelector('.shift-live-metrics');
+  if (metricsBar) metricsBar.appendChild(notice);
+
+  setTimeout(() => {
+    notice.style.opacity = '0';
+    setTimeout(() => notice.remove(), 500);
+  }, 3000);
+}
+
 function updateLiveStats(text) {
   const modelLabel = detectGeminiModel();
   const tokens = estimateTokens(text);
@@ -345,7 +352,7 @@ function updateLiveStats(text) {
   const impactDisplay = document.getElementById('shift-live-impact');
   
   if (tokens === 0) {
-    clearTimeout(liveUpdateTimeout); // Clear any pending updates
+    clearTimeout(liveUpdateTimeout);
     tokenDisplay.innerText = `0 tokens (${modelLabel})`;
     impactDisplay.innerText = "⚡ 0.000 Wh";
     document.getElementById('shift-live-searching').style.display = 'none';
@@ -354,11 +361,7 @@ function updateLiveStats(text) {
   }
 
   tokenDisplay.innerText = `${tokens} tokens (${modelLabel})`;
-  
-  // Show searching state
   document.getElementById('shift-live-searching').style.display = 'inline-block';
-
-  // Debounce API check (both impact and cache)
   debounceLiveAPIUpdate(text, modelLabel);
 }
 
@@ -369,6 +372,27 @@ function debounceLiveAPIUpdate(text, modelLabel) {
   liveUpdateTimeout = setTimeout(() => {
     const ecoModel = MODEL_MAPPING[modelLabel] || "gemini-3-flash-preview";
 
+    // Auto-compress if prompt is long enough
+    if (text.split(/\s+/).length > 10) {
+      chrome.runtime.sendMessage({
+        type: "COMPRESS_PROMPT",
+        payload: { prompt: text }
+      }, (response) => {
+        if (response?.success && response.tokensSaved > 3) {
+          const inputArea = document.querySelector('div[contenteditable="true"]');
+          if (!inputArea) return;
+
+          inputArea.focus();
+          document.execCommand('selectAll');
+          document.execCommand('insertText', false, response.compressed);
+
+          showOptimizedNotice(response.tokensSaved, response.localWhUsed, response.cloudWhSaved);
+          updateLiveStats(response.compressed);
+        }
+      });
+    }
+
+    // Fetch impact metrics
     chrome.runtime.sendMessage({
       type: "FETCH_IMPACT",
       payload: {
@@ -384,7 +408,6 @@ function debounceLiveAPIUpdate(text, modelLabel) {
         const energyStr = formatRangeDisplay(response.impacts.energy, 'energy');
         document.getElementById('shift-live-impact').innerText = `⚡ ${energyStr}`;
         
-        // Also update cache suggestion based on this call's isCached
         const suggestion = document.getElementById('shift-cache-suggestion');
         if (response.isCached) {
           lastCachedAnswer = response.cachedAnswer;
@@ -397,7 +420,6 @@ function debounceLiveAPIUpdate(text, modelLabel) {
   }, 600);
 }
 
-// Original popup UI (for final submission metrics)
 function injectMetricsUI() {
   if (document.getElementById('shift-metrics-container')) return;
 
@@ -441,7 +463,6 @@ function injectMetricsUI() {
   });
 }
 
-// Helper to format min/max ranges with auto-scaling units
 function getScaleAndUnit(metric, type) {
   if (!metric || !metric.value) return { min: 0, max: 0, unit: "N/A" };
   let min = metric.value.min || 0;
@@ -481,7 +502,6 @@ function applyMetricValue(id, metric, type) {
   target.innerText = `${formatter(min)} – ${formatter(max)} ${unit}`;
 }
 
-// Update the UI with fetched data
 function updateMetricsUI(data) {
   console.log("📊 Shift: received metrics update", data);
 
@@ -502,7 +522,6 @@ function updateMetricsUI(data) {
   if (tokenElem) tokenElem.innerText = tokenLabel;
   
   const impacts = data.impacts || {};
-  
   applyMetricValue('shift-energy-usage', impacts.energy, 'energy');
   applyMetricValue('shift-ghg-emissions', impacts.gwp, 'gwp');
   applyMetricValue('shift-water-usage', impacts.wcf, 'wcf');
@@ -522,15 +541,12 @@ function updateMetricsUI(data) {
 
 const processedMessageIds = new Set();
 
-// Try multiple selector strategies for Gemini's evolving DOM
 function findConversationTurns() {
-  // Strategy 1: Modern Gemini uses turn-based containers
   const turnContainers = document.querySelectorAll(
     '[data-turn-id], .conversation-container, .chat-turn, [class*="turn-container"]'
   );
   if (turnContainers.length > 0) return turnContainers;
 
-  // Strategy 2: Look for message-pair structures
   const messagePairs = document.querySelectorAll(
     '[class*="conversation"], [class*="message-pair"], [class*="chat-message"]'
   );
@@ -540,50 +556,42 @@ function findConversationTurns() {
 }
 
 function extractPromptText(container) {
-  // Try most specific selectors first, based on actual Gemini DOM
   const selectors = [
-    '.query-text .query-text-line',   // exact: paragraph inside query-text
-    '.query-text',                     // broader: the whole query-text div
+    '.query-text .query-text-line',
+    '.query-text',
     'user-query-content .query-text',
     '[data-message-author-role="user"]',
   ];
   for (const sel of selectors) {
     const el = container.querySelector(sel);
     if (el && el.innerText.trim()) {
-      return el.innerText
-        .replace(/^You said\s*/i, '')
-        .trim();
+      return el.innerText.replace(/^You said\s*/i, '').trim();
     }
   }
   return null;
 }
 
 function extractResponseText(container) {
-  // Most specific first, based on actual Gemini DOM structure
   const selectors = [
-    'message-content .markdown',                   // exact current Gemini structure
+    'message-content .markdown',
     '.model-response-text message-content .markdown',
     'structured-content-container .markdown',
-    '.markdown.markdown-main-panel',               // class combo unique to response
+    '.markdown.markdown-main-panel',
     '.response-container-content .markdown',
   ];
   for (const sel of selectors) {
     const el = container.querySelector(sel);
     if (el && el.innerText.trim()) {
       const text = el.innerText.trim();
-      // Guard: skip screen-reader labels that leak into selection
       if (/^(Gemini said|You said)$/i.test(text)) continue;
-      if (text.length < 5) continue; // skip trivially short matches
+      if (text.length < 5) continue;
       return text;
     }
   }
 
-  // Fallback: grab .markdown but strip any leading "Gemini said" line
   const fallback = container.querySelector('.markdown');
   if (fallback && fallback.innerText.trim()) {
-    const text = fallback.innerText.trim()
-      .replace(/^Gemini said\s*/i, '')
-      .trim();
+    const text = fallback.innerText.trim().replace(/^Gemini said\s*/i, '').trim();
     if (text.length >= 5) return text;
   }
 
@@ -591,12 +599,9 @@ function extractResponseText(container) {
 }
 
 function isResponseComplete(container) {
-  // Strategy 1 (primary): Footer with complete class — confirmed in Gemini DOM
   const footer = container.querySelector('.response-footer');
   if (footer && footer.classList.contains('complete')) return true;
 
-  // Strategy 2: Action buttons visible (copy, thumbs up/down)
-  // Only trust this if we ALSO have actual response text
   const actionButtons = container.querySelectorAll(
     'button[aria-label*="Copy"], button[aria-label="Good response"], button[aria-label="Bad response"]'
   );
@@ -608,19 +613,16 @@ function isResponseComplete(container) {
   return false;
 }
 
-// Capture the full conversation pairs (Prompt + Response)
 function captureChatPairs() {
   const turns = findConversationTurns();
 
   turns.forEach(container => {
-    // Build a stable ID from the container
     const id = container.id
       || container.getAttribute('data-turn-id')
       || container.getAttribute('data-content-id')
       || `shift-gen-${Array.from(turns).indexOf(container)}`;
 
     if (processedMessageIds.has(id)) return;
-
     if (!isResponseComplete(container)) return;
 
     const promptText = extractPromptText(container);
@@ -645,7 +647,6 @@ function captureChatPairs() {
 
     processedMessageIds.add(id);
 
-    // Fetch FINAL impact with real output tokens
     chrome.runtime.sendMessage({
       type: "FETCH_IMPACT",
       payload: {
@@ -659,7 +660,6 @@ function captureChatPairs() {
       if (response) {
         updateMetricsUI({ ...response, isFinal: true });
 
-        // SAVE TO CACHE if it wasn't already a cache hit
         if (!response.isCached) {
           console.log("💾 Shift: Saving new conversation to Upstash Vector", {
             promptPreview: promptText.substring(0, 60),
@@ -677,10 +677,8 @@ function captureChatPairs() {
   });
 }
 
-// Listen for prompt submission
 function observePrompts() {
   const observer = new MutationObserver((mutations) => {
-    // 1. Handle Submit Hooking
     const sendButton = document.querySelector('button[aria-label*="Send"]');
     if (sendButton && !sendButton.hasAttribute('data-shift-hooked')) {
       sendButton.setAttribute('data-shift-hooked', 'true');
@@ -706,7 +704,6 @@ function observePrompts() {
       });
     }
 
-    // 2. Handle Chat History Capture
     captureChatPairs();
   });
 
@@ -723,12 +720,10 @@ function handlePromptSubmission() {
   const ecoModel = MODEL_MAPPING[modelLabel] || "gemini-3-flash-preview";
   const inputTokens = estimateTokens(prompt);
 
-  // Show loading state
   injectMetricsUI();
   document.getElementById('shift-metrics-container').style.display = 'block';
   document.getElementById('shift-cache-status').innerText = `Calculating impact for ${modelLabel}...`;
 
-  // Send message to background to fetch EcoLogits data
   chrome.runtime.sendMessage({
     type: "FETCH_IMPACT",
     payload: {
@@ -743,7 +738,6 @@ function handlePromptSubmission() {
     }
   });
 }
-
 
 // Initial call
 injectMetricsUI();

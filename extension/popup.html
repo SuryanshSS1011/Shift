@@ -108,46 +108,21 @@
       <label>Vector Token</label>
       <input type="password" id="vectorToken" placeholder="Your Upstash Vector token">
     </div>
-    <button class="btn" id="saveConfig">Save Configuration</button>
-    <div class="status" id="status"></div>
   </div>
+
+  <div class="config-section">
+    <h3>Groq Config</h3>
+    <div class="form-group">
+      <label>Groq API Key</label>
+      <input type="password" id="groqKey" placeholder="gsk_...">
+    </div>
+  </div>
+
+  <button class="btn" id="saveConfig">Save Configuration</button>
+  <div class="status" id="status"></div>
 
   <div class="footer">Powered by EcoLogits.ai</div>
 
-  <script>
-    // Load saved config
-    chrome.storage.sync.get(["UPSTASH_VECTOR_URL", "UPSTASH_VECTOR_TOKEN"], (result) => {
-      if (result.UPSTASH_VECTOR_URL) {
-        document.getElementById("vectorUrl").value = result.UPSTASH_VECTOR_URL;
-      }
-      if (result.UPSTASH_VECTOR_TOKEN) {
-        document.getElementById("vectorToken").value = result.UPSTASH_VECTOR_TOKEN;
-      }
-    });
-
-    // Save config
-    document.getElementById("saveConfig").addEventListener("click", () => {
-      const url = document.getElementById("vectorUrl").value.trim();
-      const token = document.getElementById("vectorToken").value.trim();
-      const status = document.getElementById("status");
-
-      if (!url || !token) {
-        status.textContent = "Please fill in both fields";
-        status.className = "status error";
-        return;
-      }
-
-      chrome.storage.sync.set({
-        UPSTASH_VECTOR_URL: url,
-        UPSTASH_VECTOR_TOKEN: token
-      }, () => {
-        status.textContent = "Configuration saved successfully!";
-        status.className = "status success";
-        setTimeout(() => {
-          status.className = "status";
-        }, 3000);
-      });
-    });
-  </script>
+  <script src="popup.js"></script>
 </body>
 </html>

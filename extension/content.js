@@ -52,6 +52,80 @@ async function compressImage(file) {
   });
 }
 
+function detectImageGeneration(text) {
+  if (!text) return false;
+  
+  // More robust detection using regex to handle typos like "generat"
+  const actionRegex = /(generat|creat|make|draw|paint|render|visualiz|illustrat)/i;
+  const imageRegex = /(image|picture|photo|portrait|landscape|illustration|drawing|painting|sketch|graphic)/i;
+  
+  const hasAction = actionRegex.test(text);
+  const hasImage = imageRegex.test(text);
+  
+  return hasAction && hasImage;
+}
+
+function showImageDeflection(prompt) {
+  const container = document.getElementById('shift-deflection-status');
+  if (!container) return;
+
+  // More aggressive cleanup for better search subjects
+  let searchQuery = prompt
+    .replace(/(could you|can you|please|i want to|i want you to|hey gemini|ok gemini)\s+/gi, "")
+    .replace(/(generat|creat|make|draw|paint|render|visualiz|illustrat)[a-z]*\s+/gi, "")
+    .replace(/(an|a|the)\s+/gi, "")
+    .replace(/(image|picture|photo|portrait|landscape|illustration|drawing|painting|sketch|graphic)[a-z]*\s+(of|odf)\s+/gi, "")
+    .replace(/(image|picture|photo|portrait|landscape|illustration|drawing|painting|sketch|graphic)[a-z]*/gi, "")
+    // Remove common trailing filler
+    .replace(/\s+(for me|please|now|fast|today|instantly|thank you|thanks|right away)$/gi, "")
+    .replace(/[.!?]+$/, "")
+    .trim();
+
+  // Fallback to original prompt if cleanup was too aggressive or result is empty
+  if (!searchQuery) searchQuery = prompt;
+
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="shift-deflection-banner" id="shift-deflection-banner">
+      <div class="shift-deflection-header">
+        <div class="shift-deflection-title">
+          <span>🎨</span>
+          <span>Image request detected</span>
+        </div>
+        <div class="shift-deflection-dismiss" id="shift-deflection-dismiss">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </div>
+      </div>
+      <p class="shift-deflection-text">AI image generation is carbon-intensive. Consider a sustainable web search instead?</p>
+      <div class="shift-deflection-impact">
+        🌿 0g CO₂ (Search) vs ~5-10g CO₂ (AI)
+      </div>
+      <div class="shift-deflection-actions">
+        <button class="shift-deflection-btn shift-btn-primary" id="shift-search-google">
+          <span>🔍</span> Google Images
+        </button>
+        <button class="shift-deflection-btn shift-btn-outline" id="shift-search-unsplash">
+          <span>📸</span> Unsplash
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('shift-deflection-dismiss').onclick = () => {
+    container.style.display = 'none';
+  };
+
+  document.getElementById('shift-search-google').onclick = () => {
+    window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(searchQuery)}`, '_blank');
+  };
+
+  document.getElementById('shift-search-unsplash').onclick = () => {
+    window.open(`https://unsplash.com/s/photos/${encodeURIComponent(searchQuery)}`, '_blank');
+  };
+}
+
 // Map Gemini UI labels to EcoLogits model names
 const MODEL_MAPPING = {
   "Fast": "gemini-3-flash-preview",
@@ -169,7 +243,7 @@ function buildGridChartHTML() {
     const nowClass = f.isCurrent ? ' shift-bar-now' : '';
     const futureClass = (!f.isCurrent && forecast.indexOf(f) > forecast.findIndex(x => x.isCurrent)) ? ' shift-bar-future' : '';
     const tooltip = `<span class="shift-grid-tooltip">${formatHour12(f.hour)} · ${f.intensity} gCO₂</span>`;
-    return `<div class="shift-grid-bar shift-bar-${level}${nowClass}${futureClass}" style="height:${height}px">${tooltip}</div>`;
+    return `<div class="shift-grid-bar shift-grid-tooltip-container shift-bar-${level}${nowClass}${futureClass}" style="height:${height}px">${tooltip}</div>`;
   }).join('');
 
   return {
@@ -204,6 +278,7 @@ function injectLiveMonitor(inputParent) {
       <span id="shift-live-searching" class="shift-live-searching" style="display:none;">Searching cache</span>
     </div>
     <div id="shift-compression-status" style="display:none;"></div>
+    <div id="shift-deflection-status" style="display:none;"></div>
     <div class="shift-grid-row" id="shift-grid-row" title="${grid.detail}">
       ${grid.chart}
       ${grid.status}
@@ -402,7 +477,17 @@ function updateLiveStats(text) {
     impactDisplay.innerText = "⚡ 0.000 Wh";
     document.getElementById('shift-live-searching').style.display = 'none';
     document.getElementById('shift-cache-suggestion').style.display = 'none';
+    const deflectionStatus = document.getElementById('shift-deflection-status');
+    if (deflectionStatus) deflectionStatus.style.display = 'none';
     return;
+  }
+
+  // Image generation deflection check
+  if (detectImageGeneration(text)) {
+    showImageDeflection(text);
+  } else {
+    const deflectionStatus = document.getElementById('shift-deflection-status');
+    if (deflectionStatus) deflectionStatus.style.display = 'none';
   }
 
   tokenDisplay.innerText = `${tokens} tokens (${modelLabel})`;

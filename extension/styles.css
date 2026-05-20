@@ -558,3 +558,30 @@
 .shift-grid-bar:hover .shift-grid-tooltip {
   opacity: 1;
 }
+
+/* Image Compression Notice */
+.shift-compression-notice {
+  font-size: 11px;
+  color: #1565c0;
+  padding: 4px 10px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  border: 1px solid #bbdefb;
+  animation: shift-fade-in 0.3s ease-out;
+}
+
+@keyframes shift-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.shift-compression-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976d2;
+}

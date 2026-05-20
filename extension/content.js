@@ -6,7 +6,51 @@ console.log("Shift Extension: Eco-friendly LLM monitoring active.");
 
 const ECOLOGITS_API_ENDPOINT = "https://api.ecologits.ai/v1beta/estimations";
 
+const IMAGE_MAX_DIMENSION = 1024;
+const IMAGE_QUALITY = 0.75;
+
 let lastCachedAnswer = null;
+
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > IMAGE_MAX_DIMENSION) {
+            height *= IMAGE_MAX_DIMENSION / width;
+            width = IMAGE_MAX_DIMENSION;
+          }
+        } else {
+          if (height > IMAGE_MAX_DIMENSION) {
+            width *= IMAGE_MAX_DIMENSION / height;
+            height = IMAGE_MAX_DIMENSION;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+            type: "image/jpeg",
+            lastModified: Date.now()
+          });
+          resolve(compressedFile);
+        }, "image/jpeg", IMAGE_QUALITY);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // Map Gemini UI labels to EcoLogits model names
 const MODEL_MAPPING = {
@@ -159,6 +203,7 @@ function injectLiveMonitor(inputParent) {
       <span id="shift-live-impact" style="color: #666;">⚡ 0.000 Wh</span>
       <span id="shift-live-searching" class="shift-live-searching" style="display:none;">Searching cache</span>
     </div>
+    <div id="shift-compression-status" style="display:none;"></div>
     <div class="shift-grid-row" id="shift-grid-row" title="${grid.detail}">
       ${grid.chart}
       ${grid.status}
@@ -677,6 +722,69 @@ function captureChatPairs() {
   });
 }
 
+async function handleFileUpload(e) {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  const originalFile = files[0];
+  if (!originalFile.type.startsWith('image/')) return;
+  
+  // Skip if already compressed by us
+  if (e.target.dataset.shiftProcessing === 'true') return;
+
+  console.log("📸 Shift: Intercepted image upload", originalFile.name, (originalFile.size / 1024 / 1024).toFixed(2), "MB");
+
+  const statusContainer = document.getElementById('shift-compression-status');
+  if (statusContainer) {
+    statusContainer.style.display = 'block';
+    statusContainer.innerHTML = `
+      <div class="shift-compression-notice">
+        <span class="shift-compression-icon">⏳</span>
+        <span>Optimizing image for sustainability...</span>
+      </div>
+    `;
+  }
+
+  const compressedFile = await compressImage(originalFile);
+  
+  const originalSizeMB = originalFile.size / 1024 / 1024;
+  const compressedSizeMB = compressedFile.size / 1024 / 1024;
+  const reduction = ((1 - compressedSizeMB / originalSizeMB) * 100).toFixed(0);
+  
+  // Estimated tokens for image (Gemini uses ~258-768 tokens depending on size)
+  const estTokensSaved = originalSizeMB > 0.5 ? Math.round(500 * (1 - compressedSizeMB / originalSizeMB)) : 0;
+
+  if (statusContainer) {
+    statusContainer.innerHTML = `
+      <div class="shift-compression-notice">
+        <span class="shift-compression-icon">✨</span>
+        <span>Compressed: ${originalSizeMB.toFixed(1)}MB → ${compressedSizeMB.toFixed(1)}MB (−${reduction}%) · ~${estTokensSaved} tokens saved</span>
+      </div>
+    `;
+    setTimeout(() => {
+      statusContainer.style.opacity = '0';
+      setTimeout(() => {
+        statusContainer.style.display = 'none';
+        statusContainer.style.opacity = '1';
+      }, 500);
+    }, 5000);
+  }
+
+  // Replace file in input
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(compressedFile);
+  
+  e.target.dataset.shiftProcessing = 'true';
+  e.target.files = dataTransfer.files;
+  
+  // Trigger change event again so Gemini sees the new file
+  e.target.dispatchEvent(new Event('change', { bubbles: true }));
+  
+  setTimeout(() => {
+    delete e.target.dataset.shiftProcessing;
+  }, 100);
+}
+
 function observePrompts() {
   const observer = new MutationObserver((mutations) => {
     const sendButton = document.querySelector('button[aria-label*="Send"]');
@@ -703,6 +811,14 @@ function observePrompts() {
         }
       });
     }
+
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+      if (!input.hasAttribute('data-shift-hooked')) {
+        input.setAttribute('data-shift-hooked', 'true');
+        input.addEventListener('change', handleFileUpload);
+      }
+    });
 
     captureChatPairs();
   });

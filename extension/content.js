@@ -378,7 +378,7 @@ function debounceLiveAPIUpdate(text, modelLabel) {
         type: "COMPRESS_PROMPT",
         payload: { prompt: text }
       }, (response) => {
-        if (response?.success && response.tokensSaved > 3 && response.cloudWhSaved > response.localWhUsed) { {
+        if (response?.success && response.tokensSaved > 3 && response.cloudWhSaved > response.localWhUsed) {
           const inputArea = document.querySelector('div[contenteditable="true"]');
           if (!inputArea) return;
 

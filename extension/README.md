@@ -9,6 +9,7 @@ Track the environmental impact of your LLM prompts on Gemini.
 - **Grid Carbon Intensity Forecast** - Shows optimal times to use LLMs (low carbon hours)
 - **Semantic Caching** - Uses Upstash Vector DB to cache prompt/answer pairs with similarity matching
 - **Cache Suggestions** - Suggests cached answers for similar prompts to avoid redundant LLM calls
+- **Prompt Compression** - Overwrites lengthy prompts into more concise and efficient prompts
 
 ## Installation
 
@@ -19,14 +20,21 @@ Track the environmental impact of your LLM prompts on Gemini.
 3. Click **Load unpacked**
 4. Select the `extension/` folder from this repository
 
-### 2. Configure Upstash Vector
+### 2. Configure Groq API key
+
+1. Go to console.groq.com
+2. Sign in
+3. Click API Keys in the left sidebar
+4. You should see an existing key or can create a new one.
+
+### 3. Configure Upstash Vector
 
 The extension uses Upstash Vector for semantic caching. You need to configure your credentials:
 
 1. Sign up at [upstash.com](https://upstash.com) (free tier available)
 2. Create a new **Vector Index**
 3. Click the extension icon in Chrome
-4. Enter your Upstash Vector URL and Token
+4. Enter your Upstash Vector URL + Token + Groq API key
 5. Click **Save Configuration**
 
 ## Usage
@@ -38,6 +46,7 @@ The extension uses Upstash Vector for semantic caching. You need to configure yo
    - Estimated energy impact
    - Grid carbon intensity (best time to prompt)
    - Cache suggestions if similar prompts exist
+   - Prompt compression to get more concise prompts
 
 ## Supported Sites
 
@@ -53,6 +62,18 @@ When you send a prompt, the extension:
 1. Checks the Upstash Vector DB for similar cached prompts
 2. If a similar prompt is found (>90% similarity), suggests the cached answer
 3. If you proceed with a new query, the prompt+response is cached for future use
+
+### Prompt Compression
+
+When you type a prompt, the extension:
+
+1. Waits for you to pause typing (600ms debounce)
+2. If your prompt is over 10 words, sends it to Groq (Llama 3.1 8B) for compression
+3. Rewrites it to be shorter and more efficient while preserving the full meaning
+4. Automatically replaces your input with the optimized version
+5. Shows a brief notice with tokens saved and energy impact (mWh used vs mWh saved vs cloud inference)
+
+Note: Shift uses Groq (Llama 3.1 8B) to automatically compress verbose prompts before they reach Gemini. This is only triggered when the prompt exceeds 10 words and the compression saves more than 3 tokens — ensuring the optimization is always net positive.
 
 ### Environmental Impact
 
@@ -78,6 +99,7 @@ Settings are stored in `chrome.storage.sync` and persist across devices if signe
 |---------|-------------|
 | `UPSTASH_VECTOR_URL` | Your Upstash Vector index URL |
 | `UPSTASH_VECTOR_TOKEN` | Your Upstash Vector API token |
+| `GROQ_API_KEY` | Your Groq API key |
 
 ## Development
 
@@ -88,6 +110,7 @@ extension/
 ├── manifest.json      # Chrome Manifest V3
 ├── background.js      # Service worker (API calls)
 ├── content.js         # Gemini UI injection
+├── popup.js           # Storage for token, URL, and key
 ├── styles.css         # Extension styles
 ├── popup.html         # Extension popup + config
 ├── markdown.html      # Markdown viewer
@@ -103,7 +126,7 @@ extension/
 
 ## Privacy
 
-- Prompts and responses are cached in **your own** Upstash Vector database
+- Prompts and responses are cached/compressed in **your own** Upstash Vector database
 - No data is sent to third parties except:
   - EcoLogits API (for environmental impact estimates)
   - Your Upstash Vector instance (for caching)

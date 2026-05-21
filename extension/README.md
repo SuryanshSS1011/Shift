@@ -10,7 +10,7 @@ Track the environmental impact of your LLM prompts on Gemini.
 - **Semantic Caching** - Uses Upstash Vector DB to cache prompt/answer pairs with similarity matching
 - **Cache Suggestions** - Suggests cached answers for similar prompts to avoid redundant LLM calls
 - **Prompt Compression** - Overwrites lengthy prompts into more concise and efficient prompts
-
+- **Smart Image Handling** - Compresses uploaded images client-side before sending, and detects image generation requests to suggest a web search alternative with a carbon cost comparison
 ## Installation
 
 ### 1. Load the Extension
@@ -23,9 +23,8 @@ Track the environmental impact of your LLM prompts on Gemini.
 ### 2. Configure Groq API key
 
 1. Go to console.groq.com
-2. Sign in
-3. Click API Keys in the left sidebar
-4. You should see an existing key or can create a new one.
+2. Sign in and click API Keys in the left sidebar
+3. Copy an existing key or create a new one
 
 ### 3. Configure Upstash Vector
 
@@ -73,7 +72,22 @@ When you type a prompt, the extension:
 4. Automatically replaces your input with the optimized version
 5. Shows a brief notice with tokens saved and energy impact (mWh used vs mWh saved vs cloud inference)
 
-Note: Shift uses Groq (Llama 3.1 8B) to automatically compress verbose prompts before they reach Gemini. This is only triggered when the prompt exceeds 10 words and the compression saves more than 3 tokens — ensuring the optimization is always net positive.
+Groq's LPU hardware is ~10x more energy efficient than standard GPU inference, making the compression call a fraction of the cost of the tokens it saves on Gemini's larger models.
+
+
+### Smart Image Handling
+
+When you upload an image, the extension:
+
+1. Intercepts it client-side before it reaches Gemini
+2. Resizes and compresses it to the minimum resolution the model needs
+3. Shows estimated tokens saved from the size reduction
+
+When you type an image generation request, the extension:
+
+1. Detects phrases like "generate", "create an image", "draw", or "show me a picture of"
+2. Shows a banner with the estimated carbon cost of AI generation vs a web search alternative
+3. Offers a direct search link — letting you decide whether generation is worth the cost
 
 ### Environmental Impact
 
@@ -130,6 +144,7 @@ extension/
 - No data is sent to third parties except:
   - EcoLogits API (for environmental impact estimates)
   - Your Upstash Vector instance (for caching)
+  - Groq API (for prompt compression)
 - Extension only activates on gemini.google.com
 
 ## License

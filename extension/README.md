@@ -11,6 +11,8 @@ Track the environmental impact of your LLM prompts on Gemini.
 - **Cache Suggestions** - Suggests cached answers for similar prompts to avoid redundant LLM calls
 - **Prompt Compression** - Overwrites lengthy prompts into more concise and efficient prompts
 - **Smart Image Handling** - Compresses uploaded images client-side before sending, and detects image generation requests to suggest a web search alternative with a carbon cost comparison
+
+
 ## Installation
 
 ### 1. Load the Extension

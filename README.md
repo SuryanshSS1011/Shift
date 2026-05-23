@@ -65,7 +65,8 @@ npm run dev
 
 Updates made after the initial hackathon submission:
 
-- **2026-04-17**: Fixed actionFrequency type mismatch (numeric → categorical), added missing API response fields, improved dashboard data fetching, added error toasts to onboarding, removed unnecessary retry logic
+- **2026-04-17**: Fixed actionFrequency type mismatch (numeric → categorical), added missing API response fields, improved dashboard data fetching, added error toasts to onboarding, removed unnecessary retry logic.
+- **2026-05-21**: Finalized adding two new features to the extension: 1) Prompt Compression, and 2) Smart Image Handling (image compression for uploads and web search alternatives for image generation requests)
 
 ## License
 
